@@ -87,7 +87,7 @@ def main():
 	classNet = createClassificationHead(convNet)
 
 	#create trainer
-	trainer = createTrainer(network = convNet, inputVar = inputVar, y = truth)
+	trainer = createTrainer(network = classNet, inputVar = inputVar, y = truth)
 
 
 if __name__ == "__main__":
