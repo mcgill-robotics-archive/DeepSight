@@ -7,7 +7,7 @@ from collections import OrderedDict
 import pylab
 
 # 30MinNet
-# author: Robert Fratila.
+# authors: Robert Fratila, Gabriel Alacchi
 
 # TRAINING HYPER PARAMS
 LEARNING_RATE=0.001
