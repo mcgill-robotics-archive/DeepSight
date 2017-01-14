@@ -47,6 +47,14 @@ def createClassificationHead(network):
 
 	return network
 
+def createBoundingBoxHead(network):
+	
+	network = lasagne.layers.DenseLayer(network, num_units=4, nonlinearity = lasagne.nonlinearities.linear)
+
+	print ('Output Layer:')
+	print ' ',lasagne.layers.get_output_shape(network)
+
+	return network
 
 def createTrainer(network,inputVar,y):
 	print ("Creating Trainer...")
@@ -85,6 +93,8 @@ def main():
 
 	# create classification head
 	classNet = createClassificationHead(convNet)
+
+	bboxNet = createBoundingBoxHead(convNet)
 
 	#create trainer
 	trainer = createTrainer(network = classNet, inputVar = inputVar, y = truth)
