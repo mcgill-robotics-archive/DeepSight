@@ -35,11 +35,9 @@ def getConvolutionOps(dimensions, inputVar):
 
 	return network
 
-def createClassificationNetwork(dimensions, inputVar):
-	#dimensions = (1,1,data.shape[0],data.shape[1]) #We have to specify the input size because of the dense layer
 
-	# Get the convolution operations
-	network = getConvolutionOps(dimensions,inputVar)
+def createClassificationHead(network):
+	#dimensions = (1,1,data.shape[0],data.shape[1]) #We have to specify the input size because of the dense layer
 
 	# Add the classification softmax head
 	network = lasagne.layers.DenseLayer(network, num_units=2, nonlinearity = lasagne.nonlinearities.softmax)
@@ -82,11 +80,14 @@ def main():
 	inputVar = T.tensor4('input')#this will hold the image that gets inputted
 	truth = T.dmatrix('truth')
 	
-	#create network
-	network = createClassificationNetwork(dimensions=(1,1,300,600),inputVar=inputVar)
+	# Create conv net
+	convNet = getConvolutionOps(dimensions=(1,1,300,600), inputVar=inputVar)
+
+	# create classification head
+	classNet = createClassificationHead(convNet)
 
 	#create trainer
-	trainer = createTrainer(network = network, inputVar = inputVar, y = truth)
+	trainer = createTrainer(network = convNet, inputVar = inputVar, y = truth)
 
 
 if __name__ == "__main__":
