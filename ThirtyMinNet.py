@@ -39,7 +39,7 @@ def createClassificationNetwork(dimensions, inputVar):
 	#dimensions = (1,1,data.shape[0],data.shape[1]) #We have to specify the input size because of the dense layer
 
 	# Get the convolution operations
-	network = getConvolutionOps()
+	network = getConvolutionOps(dimensions,inputVar)
 
 	# Add the classification softmax head
 	network = lasagne.layers.DenseLayer(network, num_units=2, nonlinearity = lasagne.nonlinearities.softmax)
