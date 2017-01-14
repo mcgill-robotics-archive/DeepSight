@@ -6,6 +6,15 @@ import lasagne
 from collections import OrderedDict
 import pylab
 
+# 30MinNet
+# author: Robert Fratila.
+
+# TRAINING HYPER PARAMS
+LEARNING_RATE=0.001
+BETA_1=0.9
+BETA_2=0.999
+EPSILON=1e-08
+
 def createClassificationNetwork(dimensions, inputVar):
 	#dimensions = (1,1,data.shape[0],data.shape[1]) #We have to specify the input size because of the dense layer
 
@@ -43,7 +52,7 @@ def createTrainer(network,inputVar,y):
 	#calculate a loss function which has to be a scalar
 	cost = T.nnet.categorical_crossentropy(out, y).mean()
 	#calculate updates using ADAM optimization gradient descent
-	updates = lasagne.updates.adam(cost, params, learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-08)
+	updates = lasagne.updates.adam(cost, params, learning_rate=LEARNING_RATE, beta1=BETA_1, beta2=BETA_2, epsilon=EPSILON)
 	#theano function to compare brain to their masks with ADAM optimization
 	train_function = theano.function([inputVar, y], updates=updates) # omitted (, allow_input_downcast=True)
 
