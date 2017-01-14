@@ -15,9 +15,7 @@ BETA_1=0.9
 BETA_2=0.999
 EPSILON=1e-08
 
-def createClassificationNetwork(dimensions, inputVar):
-	#dimensions = (1,1,data.shape[0],data.shape[1]) #We have to specify the input size because of the dense layer
-
+def getConvolutionOps(dimensions, inputVar):
 	print ("Creating Network...")
 	network = lasagne.layers.InputLayer(shape=dimensions,input_var=inputVar)
 
@@ -35,6 +33,15 @@ def createClassificationNetwork(dimensions, inputVar):
 	network = lasagne.layers.MaxPool2DLayer(network,pool_size=(2, 2))
 	print '	',lasagne.layers.get_output_shape(network)
 
+	return network
+
+def createClassificationNetwork(dimensions, inputVar):
+	#dimensions = (1,1,data.shape[0],data.shape[1]) #We have to specify the input size because of the dense layer
+
+	# Get the convolution operations
+	network = getConvolutionOps()
+
+	# Add the classification softmax head
 	network = lasagne.layers.DenseLayer(network, num_units=2, nonlinearity = lasagne.nonlinearities.softmax)
 
 	print ('Output Layer:')
