@@ -65,6 +65,19 @@ def createTrainer(network,inputVar,y):
 
 	return train_function
 
+def saveModel(network,saveLocation='',modelName='brain1'):
+
+	networkName = '%s%s.npz'%(saveLocation,modelName)
+	print ('Saving model as %s'%networkName)
+	numpy.savez(networkName, *lasagne.layers.get_all_param_values(network))
+
+def loadModel(network, model='brain1.npz'):
+
+	with numpy.load(model) as f:
+		param_values = [f['arr_%d' % i] for i in range(len(f.files))] #gets all param values
+		lasagne.layers.set_all_param_values(network, param_values)		  #sets all param values
+	return network
+
 def main():
 	inputVar = T.tensor4('input')#this will hold the image that gets inputted
 	truth = T.dmatrix('truth')
