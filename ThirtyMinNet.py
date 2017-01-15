@@ -100,10 +100,12 @@ def load_model(network, model='brain1.npz'):
     return network
 
 def get_data():
-	#data = get_data('data/img/a_001.jpg','data/label/a_001.txt')
-	d = numpy.array([numpy.zeros(shape=(700,900)) for i in xrange(10)],dtype='float32')
-	y = numpy.array([[[0,1]]]*10,dtype='float32')
-	return OrderedDict(input=d,truth=y)
+    #data = get_data('data/img/a_001.jpg','data/label/a_001.txt')
+    import Image
+    #d = numpy.array([[Image.open('data/img/a_00%d.jpg'%i)] for i in xrange(1,10)],dtype='float32')
+    d = numpy.array([numpy.zeros(shape=(700,900)) for i in xrange(10)],dtype='float32')
+    y = numpy.array([[[0,1]]]*10,dtype='float32')
+    return OrderedDict(input=d,truth=y)
 
 def main():
     input_var = T.tensor4('input')  # this will hold the image that gets inputted
