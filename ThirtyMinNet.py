@@ -76,12 +76,12 @@ def create_trainer(network, input_var, y):
 def create_validator(network, input_var, y):
     print ("Creating Validator...")
     #We will use this for validation intermi
-    testPrediction = lasagne.layers.get_output(network, deterministic=True)			#create prediction
-    testLoss = lasagne.objectives.categorical_crossentropy(testPrediction,y).mean()   #check how much error in prediction
-    testAcc = T.mean(T.eq(T.argmax(testPrediction, axis=1), T.argmax(y, axis=1)),dtype=theano.config.floatX)	#check the accuracy of the prediction
+    valid_prediction = lasagne.layers.get_output(network, deterministic=True)			#create prediction
+    valid_loss = lasagne.objectives.categorical_crossentropy(valid_prediction,y).mean()   #check how much error in prediction
+    valid_acc = T.mean(T.eq(T.argmax(valid_prediction, axis=1), T.argmax(y, axis=1)),dtype=theano.config.floatX)	#check the accuracy of the prediction
 
-    validateFn = theano.function([input_var, y], [testLoss, testAcc])	 #check for error and accuracy percentage
-    return validateFn
+    validate_fn = theano.function([input_var, y], [valid_loss, valid_acc])	 #check for error and accuracy percentage
+    return validate_fn
 
 def save_model(network, save_location='', model_name='brain1'):
 
@@ -97,7 +97,7 @@ def load_model(network, model='brain1.npz'):
         # lasagne.layers.set_all_param_values(network, param_values)   # sets all param values
     return network
 
-def getData():
+def get_data():
 
 	d = numpy.array([numpy.zeros(shape=(700,900)) for i in xrange(10)],dtype='float32')
 	y = numpy.array([[[0,1]]]*10,dtype='float32')
@@ -111,7 +111,7 @@ def main():
     train_time = 0.01 #in hours
     model_name='br1'    
 
-    data = getData()
+    data = get_data()
 
     print ("%i samples found")%data['input'].shape[0]
     test_reserve = 0.2
@@ -137,7 +137,7 @@ def main():
     # Create validator
     validator = create_validator(class_net,input_var,truth)
 
-    record = OrderedDict(iteration=[],error=[],accuracy=[])
+    record = OrderedDict(epoch=[],error=[],accuracy=[])
 
     print ("Training for %s epoch(s) with %s samples per epoch"%(epochs_to_train,samples_per_epoch))
     #import pudb; pu.db
@@ -163,7 +163,7 @@ def main():
         error, accuracy = validator(train_in, data['truth'][choose_randomly])			     #pass modified data through network
         record['error'].append(error)
         record['accuracy'].append(accuracy)
-        record['iteration'].append(epoch)
+        record['epoch'].append(epoch)
         time_elapsed = time.time() - start_time
         epoch_time = time.time() - epoch_time
         print ("	error: %s and accuracy: %s in %.2fs\n"%(error,accuracy,epoch_time))
