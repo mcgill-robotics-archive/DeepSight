@@ -38,9 +38,15 @@ def load_image(f, flat=True):
 	img = Image.open(f)
 	img.load()
 	data = np.asarray(img, dtype="int32")
+
+	print data.shape
 	if flat:
 		img_size = data.shape[0] * data.shape[1] * data.shape[2]
 		data = img.reshape((1,img_size))
+	else:
+		# Re arrange the image to (BATCH, DEPTH, WIDTH, HEIGHT)
+		data = data.reshape((1, data.shape[2], data.shape[1], data.shape[0]))
+	
 	return data
 
 def main():
