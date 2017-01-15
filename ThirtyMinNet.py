@@ -6,6 +6,7 @@ from os import path
 
 from collections import OrderedDict
 import pylab
+import sys
 
 import time
 
@@ -104,14 +105,13 @@ def get_data():
     import Image
     #d = numpy.array([numpy.array(Image.open('data/img/a_00%d.jpg'%i)) for i in xrange(1,10)],dtype='float32')
     d = numpy.array([numpy.zeros(shape=(3, 723, 972)) for i in xrange(10)],dtype='float32')
-    y = numpy.array([[[0,1]]]*10,dtype='float32')
+    y = numpy.array([[0,1]]*10,dtype='float32')
     return OrderedDict(input=d,truth=y)
 
 def main():
     input_var = T.tensor4('input')  # this will hold the image that gets inputted
     truth = T.dmatrix('truth')
     epochs_to_train = 3
-    samples_per_epoch = 3
     train_time = 0.01 #in hours
     model_name='br1' 
 
@@ -119,18 +119,28 @@ def main():
 
     data = get_data()
 
-    print ("%i samples found")%data['input'].shape[0]
+    num_samples = data['input'].shape[0]
+
+    print ("%i samples found" % num_samples)
+    
     test_reserve = 0.2
     validation_reserve = 0.2
     training_reserve = 1-(test_reserve+validation_reserve)
 
-    training_set = data['input'][:int(training_reserve*data['input'].shape[0])]
-    validation_set = data['input'][int(training_reserve*data['input'].shape[0]):-int(validation_reserve*data['input'].shape[0])]
-    test_set = data['input'][int(validation_reserve*data['input'].shape[0] + int(training_reserve*data['input'].shape[0])):]
+    training_set = data['input'][:int(training_reserve*num_samples)]
+    validation_set = data['input'][int(training_reserve*num_samples):-int(validation_reserve*num_samples)]
+    test_set = data['input'][int(validation_reserve*num_samples + int(training_reserve*num_samples)):]
     
+    training_truth = data['truth'][:int(training_reserve*num_samples)]
+    validation_truth = data['truth'][int(training_reserve*num_samples):-int(validation_reserve*num_samples)]
+    test_truth = data['truth'][int(validation_reserve*num_samples + int(training_reserve*num_samples)):]
+
+    train_samples_per_epoch = int(training_reserve * num_samples)
+    num_train_steps = int(train_samples_per_epoch / batch_size)
+
     # import pudb; pu.db
     # Create conv net
-    conv_net = get_convolution_ops(dimensions=(batch_size, data['input'].shape[1], data['input'].shape[2], data['input'].shape[3]), input_var=input_var)
+    conv_net = get_convolution_ops(dimensions=(None, data['input'].shape[1], data['input'].shape[2], data['input'].shape[3]), input_var=input_var)
 
     # create classification head
     class_net = create_classification_head(conv_net)
@@ -146,7 +156,7 @@ def main():
 
     record = OrderedDict(epoch=[],error=[],accuracy=[])
 
-    print ("Training for %s epoch(s) with %s samples per epoch"%(epochs_to_train,samples_per_epoch))
+    print ("Training for %s epoch(s) with %s samples per epoch"%(epochs_to_train,train_samples_per_epoch))
     #import pudb; pu.db
     epoch = 0
     start_time = time.time()
@@ -154,29 +164,38 @@ def main():
     #for epoch in xrange(epochs):            #use for epoch training
     while epoch < epochs_to_train:     #use for time training
         epoch_time = time.time()
-        print ("--> Epoch: %d | Epochs left: %d")%(epoch,epochs_to_train-epoch)
+        print ("--> Epoch: %d | Epochs left: %d"%(epoch,epochs_to_train-epoch))
 
-        for i in xrange(samples_per_epoch):
-            choose_randomly = numpy.random.randint(training_set.shape[0])
-            train_in = training_set[choose_randomly]
-            #import pudb; pu.db
-            train_in = train_in.reshape([1,1] + list(train_in.shape))
-            trainer(train_in, data['truth'][choose_randomly])
+        for i in xrange(num_train_steps):
+            # Get next batch
+            train_in = training_set[i*batch_size:(i+1)*batch_size]
+            truth_in = training_truth[i*batch_size:(i+1)*batch_size]
+            trainer(train_in, truth_in)
+            percentage = float(i+1) / float(num_train_steps) * 100
+            sys.stdout.flush()
+            sys.stdout.write ("\r %d training steps complete: %.2f%% done epoch" % (i + 1, percentage))
 
-        choose_randomly = numpy.random.randint(validation_set.shape[0])
-        print ("Gathering data...")#%s"%validation_set[choose_randomly])
-        train_in = validation_set[choose_randomly]
-        train_in = train_in.reshape([1,1] + list(train_in.shape))
-        error, accuracy = validator(train_in, data['truth'][choose_randomly])			     #pass modified data through network
+        # Get error, accuracy on the test set at the end of every epoch
+        print "\nGetting test accuracy..."
+        error, accuracy = validator(test_set, test_truth)
         record['error'].append(error)
         record['accuracy'].append(accuracy)
         record['epoch'].append(epoch)
         time_elapsed = time.time() - start_time
         epoch_time = time.time() - epoch_time
-        print ("	error: %s and accuracy: %s in %.2fs\n"%(error,accuracy,epoch_time))
-        epoch+=1
+        print ("\n	error: %s and accuracy: %s in %.2fs\n"%(error,accuracy,epoch_time))
+
+        epoch += 1
+
+    print "Validating..."
+
+    # Finally validate the final error and accuracy with the validation set
+    error, accuracy = validator(validation_set, validation_truth)
+    print ("\n\nFinal Results after %d epochs of training and %.2fs elapsed" % (epochs_to_train, time_elapsed))
+    print ("    error: %s and accuracy: %s" % (error, accuracy))
 
     save_model(conv_net, 'data', 'conv_weights')
+    save_model(class_net, 'data', 'classifier_net')
 
 if __name__ == "__main__":
     main()
