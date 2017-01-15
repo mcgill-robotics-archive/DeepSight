@@ -110,7 +110,7 @@ def get_data():
 def main():
     input_var = T.tensor4('input')  # this will hold the image that gets inputted
     truth = T.dmatrix('truth')
-    epochs_to_train = 10
+    epochs_to_train = 3
     samples_per_epoch = 3
     train_time = 0.01 #in hours
     model_name='br1'    
@@ -127,7 +127,7 @@ def main():
     test_set = data['input'][int(validation_reserve*data['input'].shape[0] + int(training_reserve*data['input'].shape[0])):]
     
     # Create conv net
-    conv_net = get_convolution_ops(dimensions=(1, 1, 700, 900), input_var=input_var)
+    conv_net = get_convolution_ops(dimensions=(1, 3, 723, 972), input_var=input_var)
 
     # create classification head
     class_net = create_classification_head(conv_net)

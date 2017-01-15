@@ -67,7 +67,7 @@ def main(argv):
 	args = argparser.parse_args(argv)
 
 	input_var = T.tensor4('input')
-	network = model.get_convolution_ops(dimensions=(1, 1, 700, 900), input_var=input_var)
+	network = model.get_convolution_ops(dimensions=(1, 1, 723, 972), input_var=input_var)
 	network = model.load_model(network, args.model_file)
 
 	bottleneck = Bottleneck(network, input_var, args.bottle_dir)
