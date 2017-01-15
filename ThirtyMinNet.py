@@ -2,11 +2,13 @@ import numpy
 import theano
 import theano.tensor as T
 import lasagne
+from os import path
 
 from collections import OrderedDict
 import pylab
 
 import time
+
 # 30MinNet
 # authors: Robert Fratila, Gabriel Alacchi
 
@@ -85,7 +87,7 @@ def create_validator(network, input_var, y):
 
 def save_model(network, save_location='', model_name='brain1'):
 
-    network_name = '%s%s.npz' % (save_location, model_name)
+    network_name = '%s.npz' % path.join(save_location, model_name)
     print ('Saving model as %s' % network_name)
     numpy.savez(network_name, *lasagne.layers.get_all_param_values(network))
 
@@ -107,7 +109,7 @@ def main():
     input_var = T.tensor4('input')  # this will hold the image that gets inputted
     truth = T.dmatrix('truth')
     epochs_to_train = 10
-    samples_per_epoch = 10
+    samples_per_epoch = 3
     train_time = 0.01 #in hours
     model_name='br1'    
 
@@ -169,6 +171,7 @@ def main():
         print ("	error: %s and accuracy: %s in %.2fs\n"%(error,accuracy,epoch_time))
         epoch+=1
 
+    save_model(conv_net, 'data', 'conv_weights')
 
 if __name__ == "__main__":
     main()
