@@ -98,7 +98,7 @@ def load_model(network, model='brain1.npz'):
     return network
 
 def get_data():
-	#data = get_data('data/img/a_001.jpg','data/labels/001.txt')
+	#data = get_data('data/img/a_001.jpg','data/labels/a_001.txt')
 	d = numpy.array([numpy.zeros(shape=(700,900)) for i in xrange(10)],dtype='float32')
 	y = numpy.array([[[0,1]]]*10,dtype='float32')
 	return OrderedDict(input=d,truth=y)
