@@ -103,7 +103,7 @@ def main():
     bbox_net = create_bounding_box_head(conv_net)
 
     # Create trainer
-    trainer = create_trainer(network = class_net, input_var= input_var, y = truth)
+    trainer = create_trainer(network=class_net, input_var=input_var, y=truth)
 
 
 if __name__ == "__main__":
