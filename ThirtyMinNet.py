@@ -6,6 +6,7 @@ import lasagne
 from collections import OrderedDict
 import pylab
 
+import time
 # 30MinNet
 # authors: Robert Fratila, Gabriel Alacchi
 
@@ -25,12 +26,10 @@ def get_convolution_ops(dimensions, input_var):
 
     print ('Hidden Layer:')
     network = lasagne.layers.Conv2DLayer(network, num_filters=15, filter_size=(5, 5), pad ='same', nonlinearity=lasagne.nonlinearities.rectify)
-    print '	', lasagne.layers.get_output_shape(network)
     network = lasagne.layers.MaxPool2DLayer(network,pool_size=(2, 2))
     print '	', lasagne.layers.get_output_shape(network)
 
     network = lasagne.layers.Conv2DLayer(network, num_filters=20, filter_size=(5, 5), pad='same', nonlinearity=lasagne.nonlinearities.rectify)
-    print '	', lasagne.layers.get_output_shape(network)
     network = lasagne.layers.MaxPool2DLayer(network,pool_size=(2, 2))
     print '	', lasagne.layers.get_output_shape(network)
 
@@ -74,6 +73,15 @@ def create_trainer(network, input_var, y):
 
     return train_function
 
+def create_validator(network, input_var, y):
+    print ("Creating Validator...")
+    #We will use this for validation intermi
+    testPrediction = lasagne.layers.get_output(network, deterministic=True)			#create prediction
+    testLoss = lasagne.objectives.categorical_crossentropy(testPrediction,y).mean()   #check how much error in prediction
+    testAcc = T.mean(T.eq(T.argmax(testPrediction, axis=1), T.argmax(y, axis=1)),dtype=theano.config.floatX)	#check the accuracy of the prediction
+
+    validateFn = theano.function([input_var, y], [testLoss, testAcc])	 #check for error and accuracy percentage
+    return validateFn
 
 def save_model(network, save_location='', model_name='brain1'):
 
@@ -89,21 +97,77 @@ def load_model(network, model='brain1.npz'):
         # lasagne.layers.set_all_param_values(network, param_values)   # sets all param values
     return network
 
+def getData():
+
+	d = numpy.array([numpy.zeros(shape=(700,900)) for i in xrange(10)],dtype='float32')
+	y = numpy.array([[[0,1]]]*10,dtype='float32')
+	return OrderedDict(input=d,truth=y)
 
 def main():
     input_var = T.tensor4('input')  # this will hold the image that gets inputted
     truth = T.dmatrix('truth')
+    epochs_to_train = 10
+    samples_per_epoch = 10
+    train_time = 0.01 #in hours
+    model_name='br1'    
 
+    data = getData()
+
+    print ("%i samples found")%data['input'].shape[0]
+    test_reserve = 0.2
+    validation_reserve = 0.2
+    training_reserve = 1-(test_reserve+validation_reserve)
+
+    training_set = data['input'][:int(training_reserve*data['input'].shape[0])]
+    validation_set = data['input'][int(training_reserve*data['input'].shape[0]):-int(validation_reserve*data['input'].shape[0])]
+    test_set = data['input'][int(validation_reserve*data['input'].shape[0] + int(training_reserve*data['input'].shape[0])):]
+    
     # Create conv net
-    conv_net = get_convolution_ops(dimensions=(1, 1, 300, 600), input_var=input_var)
+    conv_net = get_convolution_ops(dimensions=(1, 1, 700, 900), input_var=input_var)
 
     # create classification head
     class_net = create_classification_head(conv_net)
 
-    bbox_net = create_bounding_box_head(conv_net)
+    # create bounding box head
+    #bbox_net = create_bounding_box_head(conv_net)
 
     # Create trainer
     trainer = create_trainer(network=class_net, input_var=input_var, y=truth)
+
+    # Create validator
+    validator = create_validator(class_net,input_var,truth)
+
+    record = OrderedDict(iteration=[],error=[],accuracy=[])
+
+    print ("Training for %s epoch(s) with %s samples per epoch"%(epochs_to_train,samples_per_epoch))
+    #import pudb; pu.db
+    epoch = 0
+    start_time = time.time()
+    time_elapsed = time.time() - start_time
+    #for epoch in xrange(epochs):            #use for epoch training
+    while epoch < epochs_to_train:     #use for time training
+        epoch_time = time.time()
+        print ("--> Epoch: %d | Epochs left: %d")%(epoch,epochs_to_train-epoch)
+
+        for i in xrange(samples_per_epoch):
+            choose_randomly = numpy.random.randint(training_set.shape[0])
+            train_in = training_set[choose_randomly]
+            #import pudb; pu.db
+            train_in = train_in.reshape([1,1] + list(train_in.shape))
+            trainer(train_in, data['truth'][choose_randomly])
+
+        choose_randomly = numpy.random.randint(validation_set.shape[0])
+        print ("Gathering data...")#%s"%validation_set[choose_randomly])
+        train_in = validation_set[choose_randomly]
+        train_in = train_in.reshape([1,1] + list(train_in.shape))
+        error, accuracy = validator(train_in, data['truth'][choose_randomly])			     #pass modified data through network
+        record['error'].append(error)
+        record['accuracy'].append(accuracy)
+        record['iteration'].append(epoch)
+        time_elapsed = time.time() - start_time
+        epoch_time = time.time() - epoch_time
+        print ("	error: %s and accuracy: %s in %.2fs\n"%(error,accuracy,epoch_time))
+        epoch+=1
 
 
 if __name__ == "__main__":
