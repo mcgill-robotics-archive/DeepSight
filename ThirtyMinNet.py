@@ -103,7 +103,7 @@ def get_data():
     #data = get_data('data/img/a_001.jpg','data/label/a_001.txt')
     import Image
     #d = numpy.array([numpy.array(Image.open('data/img/a_00%d.jpg'%i)) for i in xrange(1,10)],dtype='float32')
-    d = numpy.array([numpy.zeros(shape=(700,900)) for i in xrange(10)],dtype='float32')
+    d = numpy.array([numpy.zeros(shape=(3, 723, 972)) for i in xrange(10)],dtype='float32')
     y = numpy.array([[[0,1]]]*10,dtype='float32')
     return OrderedDict(input=d,truth=y)
 
@@ -113,7 +113,9 @@ def main():
     epochs_to_train = 3
     samples_per_epoch = 3
     train_time = 0.01 #in hours
-    model_name='br1'    
+    model_name='br1' 
+
+    batch_size = 2
 
     data = get_data()
 
@@ -125,15 +127,16 @@ def main():
     training_set = data['input'][:int(training_reserve*data['input'].shape[0])]
     validation_set = data['input'][int(training_reserve*data['input'].shape[0]):-int(validation_reserve*data['input'].shape[0])]
     test_set = data['input'][int(validation_reserve*data['input'].shape[0] + int(training_reserve*data['input'].shape[0])):]
-    #import pudb; pu.db
+    
+    # import pudb; pu.db
     # Create conv net
-    conv_net = get_convolution_ops(dimensions=(1, 1, data['input'].shape[1], data['input'].shape[2]), input_var=input_var)
+    conv_net = get_convolution_ops(dimensions=(batch_size, data['input'].shape[1], data['input'].shape[2], data['input'].shape[3]), input_var=input_var)
 
     # create classification head
     class_net = create_classification_head(conv_net)
 
     # create bounding box head
-    #bbox_net = create_bounding_box_head(conv_net)
+    # bbox_net = create_bounding_box_head(conv_net)
 
     # Create trainer
     trainer = create_trainer(network=class_net, input_var=input_var, y=truth)
