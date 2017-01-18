@@ -4,6 +4,8 @@ from os import path
 import numpy as np
 
 def _load_list(image_names, image_dir, label_dir):
+
+    # TODO: This is where you would perform image resizing
     batch_images = map(lambda image_name: load_image(path.join(image_dir, image_name + '.jpg')), image_names)
     batch_labels = map(lambda image_name: contains_buoy(load_label(path.join(label_dir, image_name + '.txt'))), image_names)
 
@@ -14,6 +16,8 @@ def _load_list(image_names, image_dir, label_dir):
 class DataSet:
 
     def __init__(self, image_names, data_dir, batch_size = 1, image_size=None):
+        # TODO: Implement image_size option so that if provided the images are resized after loaded.
+
         self.image_names = image_names
         self.data_dir = data_dir
         self.num_images = len(image_names)
@@ -30,7 +34,7 @@ class DataSet:
 
     # This method simply returns a images as an array of (BATCH, DEPTH, WIDTH, HEIGHT) and labels as an array (BATCH, LABEL)
     def next_batch(self):
-        # Todo: Implement some kind of cache for images so we can optimize the training process.
+        # TODO: Implement some kind of cache for images so we can optimize the training process.
         # If possible we should offer an option to cache images directly into a GPU tensorflow variable (if we do tensorflow gpu training)
 
         if self.index + self.batch_size > self.num_images:
@@ -38,6 +42,8 @@ class DataSet:
             self.index = 0
 
         batch_names = self.image_names[self.index:self.index+self.batch_size]
+
+        # Increment the index
         self.index += self.batch_size
 
         if self.index + self.batch_size >= self.num_images:
