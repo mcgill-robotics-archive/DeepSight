@@ -10,6 +10,8 @@ import sys
 
 import time
 
+from DataSet import DataSet
+
 # 30MinNet
 # authors: Robert Fratila, Gabriel Alacchi
 
@@ -104,7 +106,7 @@ def get_data():
     #data = get_data('data/img/a_001.jpg','data/label/a_001.txt')
     import Image
     #d = numpy.array([numpy.array(Image.open('data/img/a_00%d.jpg'%i)) for i in xrange(1,10)],dtype='float32')
-    d = numpy.array([numpy.zeros(shape=(3, 723, 972)) for i in xrange(10)],dtype='float32')
+    d = numpy.array([numpy.zeros(shape=(3, 972, 723)) for i in xrange(10)],dtype='float32')
     y = numpy.array([[0,1]]*10,dtype='float32')
     return OrderedDict(input=d,truth=y)
 
@@ -127,16 +129,11 @@ def main():
     validation_reserve = 0.2
     training_reserve = 1-(test_reserve+validation_reserve)
 
-    training_set = data['input'][:int(training_reserve*num_samples)]
-    validation_set = data['input'][int(training_reserve*num_samples):-int(validation_reserve*num_samples)]
-    test_set = data['input'][int(validation_reserve*num_samples + int(training_reserve*num_samples)):]
-    
-    training_truth = data['truth'][:int(training_reserve*num_samples)]
-    validation_truth = data['truth'][int(training_reserve*num_samples):-int(validation_reserve*num_samples)]
-    test_truth = data['truth'][int(validation_reserve*num_samples + int(training_reserve*num_samples)):]
+    training_data_set = DataSet(['a_{0:03}'.format(i + 1) for i in xrange(6)], data_dir='./data', batch_size=batch_size)
+    validation_data_set = DataSet(['a_{0:03}'.format(i + 1) for i in xrange(6, 8)], data_dir='./data', batch_size=2)
+    testing_data_set = DataSet(['a_{0:03}'.format(i + 1) for i in xrange(8, 10)], data_dir='./data', batch_size=2)
 
-    train_samples_per_epoch = int(training_reserve * num_samples)
-    num_train_steps = int(train_samples_per_epoch / batch_size)
+    num_train_steps = training_data_set.get_epoch_steps()
 
     # import pudb; pu.db
     # Create conv net
@@ -156,7 +153,7 @@ def main():
 
     record = OrderedDict(epoch=[],error=[],accuracy=[])
 
-    print ("Training for %s epoch(s) with %s samples per epoch"%(epochs_to_train,train_samples_per_epoch))
+    print ("Training for %s epoch(s) with %s steps per epoch"%(epochs_to_train,num_train_steps))
     #import pudb; pu.db
     epoch = 0
     start_time = time.time()
@@ -168,8 +165,8 @@ def main():
 
         for i in xrange(num_train_steps):
             # Get next batch
-            train_in = training_set[i*batch_size:(i+1)*batch_size]
-            truth_in = training_truth[i*batch_size:(i+1)*batch_size]
+
+            train_in, truth_in = training_data_set.next_batch()
             trainer(train_in, truth_in)
             percentage = float(i+1) / float(num_train_steps) * 100
             sys.stdout.flush()
@@ -177,6 +174,10 @@ def main():
 
         # Get error, accuracy on the test set at the end of every epoch
         print "\nGetting test accuracy..."
+
+        # TODO: If the test / validation sets are too large we should load them in batches rather than the entire set
+        test_set, test_truth = testing_data_set.load_all()
+
         error, accuracy = validator(test_set, test_truth)
         record['error'].append(error)
         record['accuracy'].append(accuracy)
@@ -190,6 +191,8 @@ def main():
     print "Validating..."
 
     # Finally validate the final error and accuracy with the validation set
+    # We should validate on the entire set, so use load_all
+    validation_set, validation_truth = validation_data_set.load_all()
     error, accuracy = validator(validation_set, validation_truth)
     print ("\n\nFinal Results after %d epochs of training and %.2fs elapsed" % (epochs_to_train, time_elapsed))
     print ("    error: %s and accuracy: %s" % (error, accuracy))

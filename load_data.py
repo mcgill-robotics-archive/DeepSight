@@ -25,7 +25,7 @@ def contains_buoy(label):
 		label = [0,1]
 	else:
 		label = [1,0]
-	return label
+	return np.array(label).reshape((1, 2))
 
 def load_label(f):
 	file_obj = open(f,'rb')
@@ -34,19 +34,20 @@ def load_label(f):
 		label.append(literal_eval(line))
 	return label
 
-def load_image(f, flat=True):
+def load_image(f, flat=False):
 	img = Image.open(f)
 	img.load()
-	data = np.asarray(img, dtype="int32")
+	data = np.asarray(img, dtype="float32")
 
-	print data.shape
 	if flat:
 		img_size = data.shape[0] * data.shape[1] * data.shape[2]
 		data = img.reshape((1,img_size))
 	else:
-		# Re arrange the image to (BATCH, DEPTH, WIDTH, HEIGHT)
-		data = data.reshape((1, data.shape[2], data.shape[1], data.shape[0]))
-	
+		# Add the batch dimension to the image
+		data = data.reshape([1] + list(data.shape))
+		# Set the dimension order to (BATCH, DEPTH, WIDTH, HEIGHT)
+		data = data.transpose((0, 3, 2, 1))
+
 	return data
 
 def main():
