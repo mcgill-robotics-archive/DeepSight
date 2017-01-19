@@ -3,6 +3,8 @@ from load_data import load_image, load_label, contains_buoy
 from os import path, listdir
 import numpy as np
 import random
+import sys
+import argparse
 
 
 def _load_list(image_names, image_dir, label_dir, net_type):
@@ -118,3 +120,29 @@ def resize_bulk(data_dir, img_size):
         im = imread(image_file, mode='RGB')
         im = imresize(im, img_size)
         imsave(image_file, im)
+
+
+def main(argv):
+    
+    argparser = argparse.ArgumentParser(description='Running this script will resize all the images to the provided size')
+    argparser.add_argument('-d', '--data-dir',
+        dest='data_dir',
+        help='Data root directory',
+        required=True)
+    argparser.add_argument('-s', '--size',
+        dest='image_size',
+        help='A comma delimited tuple representing size in the order (height, width). Example: --size 210,280',
+        required=True)
+
+    args = argparser.parse_args(argv)
+
+    data_dir = args.data_dir
+    image_size = args.image_size
+    image_size = map(lambda size: int(size), image_size.split(','))
+    if len(image_size) != 2:
+        print "Invalid image size input: %s" % args.image_size
+    else:
+        resize_bulk(data_dir, img_size=image_size)
+
+if __name__ == "__main__":
+    main(sys.argv[1:])
