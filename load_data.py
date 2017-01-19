@@ -6,7 +6,7 @@ import sys, glob, cv2
 def load(path_to_data):
 	#takes a string pointing to a location that contains an img folder with raw images, 
 	#and a label folder that contains the labels and bounding boxes as text files for each frame
-	files = glob.glob(path_to_data + '/img/*')
+	files = glob.glob(path_to_data + '/img/*')[:1]
 	images_w_labels = []
 
 	for f in files:
@@ -34,9 +34,10 @@ def load_label(f):
 		label.append(literal_eval(line))
 	return label
 
-@profile
+# @profile
 def load_image(f, flat=False, net_type="VGG"):
 	img = cv2.imread(f)
+
 	# img = Image.open(f)
 	# img.load()
 	data = np.asarray(img, dtype="float32")
