@@ -3,6 +3,11 @@ import tensorflow as tf
 import numpy as np
 import sys
 
+from DataSet import create_data_sets
+
+NUM_EPOCHS = 1
+LEARNING_RATE = 0.001
+
 # Creates a variable initialized by a normal distribution
 def _kernel_variable(shape, name, trainable):
     return tf.Variable(tf.truncated_normal(shape, dtype=tf.float32, stddev=1e-1), name=name, trainable=trainable)
@@ -179,7 +184,7 @@ class Model:
 
         # conv5_1
         with tf.name_scope('conv5_1') as scope:
-            kernel = _kernel_variable([3, 3, 512, 512], name='weights', trainable=False)
+            kernel = _kernel_variable([3, 3, 512, 512], name='weights', trainable=True)
             conv = tf.nn.conv2d(self.pool4, kernel, [1, 1, 1, 1], padding='SAME')
             biases = _bias_variable([512], name='weights', trainable=False)
             out = tf.nn.bias_add(conv, biases)
@@ -190,7 +195,7 @@ class Model:
 
         # conv5_2
         with tf.name_scope('conv5_2') as scope:
-            kernel = _kernel_variable([3, 3, 512, 512], name='weights', trainable=False)
+            kernel = _kernel_variable([3, 3, 512, 512], name='weights', trainable=True)
             conv = tf.nn.conv2d(self.conv5_1, kernel, [1, 1, 1, 1], padding='SAME')
             biases = _bias_variable([512], name='weights', trainable=False)
             out = tf.nn.bias_add(conv, biases)
@@ -201,7 +206,7 @@ class Model:
 
         # conv5_3
         with tf.name_scope('conv5_3') as scope:
-            kernel = _kernel_variable([3, 3, 512, 512], name='weights', trainable=False)
+            kernel = _kernel_variable([3, 3, 512, 512], name='weights', trainable=True)
             conv = tf.nn.conv2d(self.conv5_2, kernel, [1, 1, 1, 1], padding='SAME')
             biases = _bias_variable([512], name='weights', trainable=False)
             out = tf.nn.bias_add(conv, biases)
@@ -249,7 +254,7 @@ class Model:
                                     name='pool6')
 
     # Classification head
-    def classifier_head(self, num_classes, attach_point=None):
+    def classifier_head(self, num_classes, labels, attach_point=None):
         if not attach_point:
             attach_point = self.pool6
 
@@ -276,7 +281,9 @@ class Model:
             self.class_weights['softmax_W'] = weights
             self.class_weights['softmax_b'] = biases
 
-        return self.softmax
+        softmax_to_loss = tf.nn.softmax_cross_entropy_with_logits(labels=labels, logits=fc2)
+
+        return self.softmax, tf.reduce_mean(softmax_to_loss)
 
     def bbox_head(self, attach_point):
         layer_size = int(np.prod(attach_point.get_shape().as_list()[1:]))
@@ -304,14 +311,9 @@ class Model:
 
         return self.bbox_output
 
-    def create_loss(self, loss_input, labels):
-        labels = tf.cast(labels, dtype=tf.float32)
-
-        # Compute cross entropy loss per batch
-        cross_entropy_per_batch =  -tf.reduce_sum(labels * tf.log(loss_input), reduction_indices=[2])
-
-        # Average the loss over the batch
-        return tf.reduce_mean(cross_entropy_per_batch)
+    def create_validator(self, val_input, labels):
+        correct = tf.equal(tf.argmax(val_input, 1), tf.argmax(labels, 1))
+        return tf.reduce_mean(tf.cast(correct, tf.float32), name='evaluation')
 
     def initialize_pre_training(self, sess, classifier=True, bbox_regression=False):
         # Create a list of all variables
@@ -358,21 +360,92 @@ class Model:
 
         _load_weights(self.bbox_weights, weight_file, sess)
 
+
 def main(argv):
 
-    x = tf.placeholder(dtype=tf.float32, shape=(1, 224, 224, 3))
-    vgg = Model(x)
+        images = tf.placeholder(dtype=tf.float32, shape=(None, 210, 280, 3))
+        labels = tf.placeholder(dtype=tf.float32, shape=(None, 2))
 
-    sess = tf.Session()
+        vgg = Model(images)
 
-    vgg.load_vgg_weights('./data/vgg16_weights.npz', sess)
+        sess = tf.Session()
 
-    classifier = vgg.classifier_head(num_classes=2)
-    vgg.initialize_pre_training(sess, classifier=True, bbox_regression=False)
+        classifier, loss = vgg.classifier_head(num_classes=2, labels=labels)
 
-    output = sess.run(classifier, feed_dict={ x: np.random.rand(1, 224, 224, 3) })
-    print output
+        training, testing, validation = create_data_sets(data_dir='./data')
 
+        training.set_batch_size(40)
+        testing.set_batch_size(40)
+        validation.set_batch_size(40)
+
+        validator = vgg.create_validator(classifier, labels)
+
+        train_step = tf.train.AdamOptimizer(learning_rate=LEARNING_RATE).minimize(loss)
+        sess.run(tf.initialize_all_variables())
+
+        vgg.load_vgg_weights('./data/vgg16_weights.npz', sess)
+        vgg.initialize_pre_training(sess, classifier=True, bbox_regression=False)
+
+        epochs_to_train = NUM_EPOCHS
+        num_steps_per_epoch = training.get_epoch_steps()
+        reporting_step = int(num_steps_per_epoch / 4)
+
+        print "Running %d epochs with %d training steps per epoch" % (epochs_to_train, num_steps_per_epoch)
+        for epoch in xrange(epochs_to_train):
+
+            print "Epoch: %d --- Epochs left: %d" % (epoch, epochs_to_train - epoch)
+            print "-----------------------------------------------"
+
+            for step in xrange(num_steps_per_epoch):
+                sys.stdout.flush()
+                sys.stdout.write('\rStep: %d' % (step + 1))
+
+                batch_images, batch_labels = training.next_batch()
+                sess.run(train_step, feed_dict={
+                    images: batch_images,
+                    labels: batch_labels
+                })
+
+                if step % reporting_step == 0:
+                    loss_val, accuracy = sess.run((loss, validator), feed_dict={
+                        images: batch_images,
+                        labels: batch_labels
+                    })
+
+                    print "\r    Step %d --- loss: %f --- accuracy: %f" % (step, loss_val, accuracy)
+
+            test_images, test_labels = testing.next_batch()
+            loss_val, accuracy = sess.run((loss, validator), feed_dict={
+                images: test_images,
+                labels: test_labels
+            })
+
+            print "\nFinal results for epoch %d --- loss: %f --- accuracy: %f" % (epoch, loss_val, accuracy)
+
+        print "-----------------------------------------------"
+
+        print "Loading validation set for final accuracy..."
+
+        final_loss = 0.0
+        final_accuracy = 0.0
+
+        for step in xrange(validation.get_epoch_steps()):
+            validation_images, validation_labels = validation.next_batch()
+            loss_val, accuracy = sess.run((loss, validator), feed_dict={
+                images: validation_images,
+                labels: validation_labels
+            })
+
+            final_loss += loss_val
+            final_accuracy += accuracy
+
+        final_loss /= validation.get_epoch_steps()
+        final_accuracy /= validation.get_epoch_steps()
+
+        print "Validation data results: --- loss: %f --- accuracy: %f" % (final_loss, final_accuracy)
+
+        vgg.save_conv_weights('./data/conv_weights.npz', sess)
+        vgg.save_class_weights('./data/class_weights.npz', sess)
 
 if __name__ == "__main__":
     main(sys.argv[1:])

@@ -46,7 +46,6 @@ def load_image(f, flat=False):
 		# Add the batch dimension to the image
 		data = data.reshape([1] + list(data.shape))
 		# Set the dimension order to (BATCH, DEPTH, WIDTH, HEIGHT)
-		data = data.transpose((0, 3, 2, 1))
 
 	return data
 
