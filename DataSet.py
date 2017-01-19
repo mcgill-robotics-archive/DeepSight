@@ -5,10 +5,10 @@ import numpy as np
 import random
 
 
-def _load_list(image_names, image_dir, label_dir):
+def _load_list(image_names, image_dir, label_dir, net_type):
 
     # TODO: This is where you would perform image resizing
-    batch_images = map(lambda image_name: load_image(path.join(image_dir, image_name + '.jpg')), image_names)
+    batch_images = map(lambda image_name: load_image(path.join(image_dir, image_name + '.jpg'), net_type=net_type), image_names)
     batch_labels = map(lambda image_name: contains_buoy(load_label(path.join(label_dir, image_name + '.txt'))), image_names)
 
     # Concatenate images and labels over batch dimension
@@ -17,7 +17,7 @@ def _load_list(image_names, image_dir, label_dir):
 
 class DataSet:
 
-    def __init__(self, image_names, data_dir, batch_size = 1, image_size=None):
+    def __init__(self, image_names, data_dir, net_type, batch_size = 1, image_size=None):
         # TODO: Implement image_size option so that if provided the images are resized after loaded.
 
         self.image_names = image_names
@@ -30,7 +30,7 @@ class DataSet:
 
         self.image_dir = path.join(self.data_dir, 'img')
         self.label_dir = path.join(self.data_dir, 'label')
-
+        self.net_type = net_type
         if self.num_images % self.batch_size != 0:
             print "Warning: The number of images %d is not divisible by the batch size %d, some images will be ignored" \
                   % (self.num_images, self.batch_size)
@@ -61,15 +61,15 @@ class DataSet:
         if self.index + self.batch_size >= self.num_images:
             self.index = 0
 
-        return _load_list(batch_names, image_dir=self.image_dir, label_dir=self.label_dir)
+        return _load_list(batch_names, image_dir=self.image_dir, label_dir=self.label_dir, net_type = self.net_type)
 
     def load_all(self):
 
-        return _load_list(self.image_names, image_dir=self.image_dir, label_dir=self.label_dir)
+        return _load_list(self.image_names, image_dir=self.image_dir, label_dir=self.label_dir, net_type = self.net_type)
 
 
 # Returns training sets, validation sets, testing sets in that order as a tuple
-def create_data_sets(data_dir, training_reserve=0.7, testing_reserve=0.1, validation_reserve=0.2):
+def create_data_sets(data_dir, training_reserve=0.7, testing_reserve=0.1, validation_reserve=0.2, net_type = "VGG"):
 
     # Make sure the proportions add to 1.0, if not warn the user and switch back to defaults
     if training_reserve + testing_reserve + validation_reserve != 1.0:
@@ -101,9 +101,9 @@ def create_data_sets(data_dir, training_reserve=0.7, testing_reserve=0.1, valida
     i += num_testing
     validation_names = image_names[i:i+num_validation]
 
-    return (DataSet(training_names, data_dir),
-            DataSet(testing_names, data_dir),
-            DataSet(validation_names, data_dir))
+    return (DataSet(training_names, data_dir, net_type),
+            DataSet(testing_names, data_dir, net_type),
+            DataSet(validation_names, data_dir, net_type))
 
 
 def resize_bulk(data_dir, img_size):

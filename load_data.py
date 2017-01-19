@@ -34,7 +34,7 @@ def load_label(f):
 		label.append(literal_eval(line))
 	return label
 
-def load_image(f, flat=False):
+def load_image(f, flat=False, net_type="VGG"):
 	img = Image.open(f)
 	img.load()
 	data = np.asarray(img, dtype="float32")
@@ -44,9 +44,14 @@ def load_image(f, flat=False):
 		data = img.reshape((1,img_size))
 	else:
 		# Add the batch dimension to the image
-		data = data.reshape([1] + list(data.shape))
+		if net_type is "VGG":
+		    data = data.reshape([1] + list(data.shape))
+		elif net_type is "Custom":
+			data = data.reshape([1] + list(data.shape))
+			data = np.swapaxes(data,2,3)
+			data = np.swapaxes(data,1,2)
 		# Set the dimension order to (BATCH, DEPTH, WIDTH, HEIGHT)
-
+	
 	return data
 
 def main():

@@ -1,4 +1,4 @@
-import numpy
+import numpy as np
 import theano
 import theano.tensor as T
 import lasagne
@@ -10,7 +10,7 @@ import sys
 
 import time
 
-from DataSet import DataSet
+from DataSet import create_data_sets
 
 # 30MinNet
 # authors: Robert Fratila, Gabriel Alacchi
@@ -92,12 +92,12 @@ def save_model(network, save_location='', model_name='brain1'):
 
     network_name = '%s.npz' % path.join(save_location, model_name)
     print ('Saving model as %s' % network_name)
-    numpy.savez(network_name, *lasagne.layers.get_all_param_values(network))
+    np.savez(network_name, *lasagne.layers.get_all_param_values(network))
 
 
 def load_model(network, model='brain1.npz'):
 
-    with numpy.load(model) as f:
+    with np.load(model) as f:
         param_values = [f['arr_%d' % i] for i in range(len(f.files))]  # gets all param values
         # lasagne.layers.set_all_param_values(network, param_values)   # sets all param values
     return network
@@ -105,9 +105,9 @@ def load_model(network, model='brain1.npz'):
 def get_data():
     #data = get_data('data/img/a_001.jpg','data/label/a_001.txt')
     import Image
-    #d = numpy.array([numpy.array(Image.open('data/img/a_00%d.jpg'%i)) for i in xrange(1,10)],dtype='float32')
-    d = numpy.array([numpy.zeros(shape=(3, 972, 723)) for i in xrange(10)],dtype='float32')
-    y = numpy.array([[0,1]]*10,dtype='float32')
+    #d = np.array([np.array(Image.open('data/img/a_00%d.jpg'%i)) for i in xrange(1,10)],dtype='float32')
+    d = np.array([np.zeros(shape=(3, 972, 723)) for i in xrange(10)],dtype='float32')
+    y = np.array([[0,1]]*10,dtype='float32')
     return OrderedDict(input=d,truth=y)
 
 def main():
@@ -129,11 +129,18 @@ def main():
     validation_reserve = 0.2
     training_reserve = 1-(test_reserve+validation_reserve)
 
-    training_data_set = DataSet(['a_{0:03}'.format(i + 1) for i in xrange(6)], data_dir='./data', batch_size=batch_size)
-    validation_data_set = DataSet(['a_{0:03}'.format(i + 1) for i in xrange(6, 8)], data_dir='./data', batch_size=2)
-    testing_data_set = DataSet(['a_{0:03}'.format(i + 1) for i in xrange(8, 10)], data_dir='./data', batch_size=2)
+    #training_data_set = DataSet(['a_{0:03}'.format(i + 1) for i in xrange(6)], data_dir='./data', batch_size=batch_size)
+    #validation_data_set = DataSet(['a_{0:03}'.format(i + 1) for i in xrange(6, 8)], data_dir='./data', batch_size=2)
+    #testing_data_set = DataSet(['a_{0:03}'.format(i + 1) for i in xrange(8, 10)], data_dir='./data', batch_size=2)
+    
+    training, testing, validation = create_data_sets(data_dir='./data',net_type = "Custom")
 
-    num_train_steps = training_data_set.get_epoch_steps()
+    training.set_batch_size(2)
+    testing.set_batch_size(2)
+    validation.set_batch_size(2)
+
+    
+    num_train_steps = training.get_epoch_steps()
 
     # import pudb; pu.db
     # Create conv net
@@ -166,7 +173,8 @@ def main():
         for i in xrange(num_train_steps):
             # Get next batch
 
-            train_in, truth_in = training_data_set.next_batch()
+            train_in, truth_in = training.next_batch()
+
             trainer(train_in, truth_in)
             percentage = float(i+1) / float(num_train_steps) * 100
             sys.stdout.flush()
