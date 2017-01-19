@@ -1,7 +1,7 @@
 import numpy as np
 from PIL import Image
 from ast import literal_eval
-import sys, glob
+import sys, glob, cv2
 
 def load(path_to_data):
 	#takes a string pointing to a location that contains an img folder with raw images, 
@@ -34,9 +34,11 @@ def load_label(f):
 		label.append(literal_eval(line))
 	return label
 
+@profile
 def load_image(f, flat=False, net_type="VGG"):
-	img = Image.open(f)
-	img.load()
+	img = cv2.imread(f)
+	# img = Image.open(f)
+	# img.load()
 	data = np.asarray(img, dtype="float32")
 
 	if flat:
@@ -55,7 +57,7 @@ def load_image(f, flat=False, net_type="VGG"):
 	return data
 
 def main():
-	print load(sys.argv[1])[0]
+	print load(sys.argv[1])
 	# img = load_image(sys.argv[1], False)
 	# print img
 	
