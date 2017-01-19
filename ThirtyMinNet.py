@@ -125,14 +125,6 @@ def main():
 
     print ("%i samples found" % num_samples)
     
-    test_reserve = 0.2
-    validation_reserve = 0.2
-    training_reserve = 1-(test_reserve+validation_reserve)
-
-    #training_data_set = DataSet(['a_{0:03}'.format(i + 1) for i in xrange(6)], data_dir='./data', batch_size=batch_size)
-    #validation_data_set = DataSet(['a_{0:03}'.format(i + 1) for i in xrange(6, 8)], data_dir='./data', batch_size=2)
-    #testing_data_set = DataSet(['a_{0:03}'.format(i + 1) for i in xrange(8, 10)], data_dir='./data', batch_size=2)
-    
     training, testing, validation = create_data_sets(data_dir='./data',net_type = "Custom")
 
     training.set_batch_size(2)
@@ -207,6 +199,12 @@ def main():
 
     save_model(conv_net, 'data', 'conv_weights')
     save_model(class_net, 'data', 'classifier_net')
+
+    #save metrics to pickle file to be opened later and displayed
+	import pickle
+	with open('%sstats.pickle'%modelName,'w') as output:
+		#import pudb; pu.db
+		pickle.dump(record,output)
 
 if __name__ == "__main__":
     main()
