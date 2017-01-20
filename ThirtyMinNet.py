@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 import numpy as np
 import theano
 import theano.tensor as T
@@ -11,15 +13,18 @@ import sys
 import time
 
 from DataSet import create_data_sets
+import argparse
 
 # 30MinNet
 # authors: Robert Fratila, Gabriel Alacchi
 
-# TRAINING HYPER PARAMS
+# TRAINING HYPER PARAMS DEFAULTS
 LEARNING_RATE = 1e-5
 BETA_1 = 0.9
 BETA_2 = 0.999
 EPSILON = 1e-08
+BATCH_SIZE = 30
+EPOCHS = 20
 
 
 def get_convolution_ops(dimensions, input_var):
@@ -64,7 +69,7 @@ def create_bounding_box_head(network):
     return network
 
 
-def create_trainer(network, input_var, y):
+def create_trainer(network, input_var, y, learning_rate=LEARNING_RATE, beta1=BETA_1, beta2=BETA_2, epsilon=EPSILON):
     print ("Creating Trainer...")
     # output of network
     out = lasagne.layers.get_output(network)
@@ -73,7 +78,7 @@ def create_trainer(network, input_var, y):
     # calculate a loss function which has to be a scalar
     cost = T.nnet.categorical_crossentropy(out, y).mean()
     # calculate updates using ADAM optimization gradient descent
-    updates = lasagne.updates.adam(cost, params, learning_rate=LEARNING_RATE, beta1=BETA_1, beta2=BETA_2, epsilon=EPSILON)
+    updates = lasagne.updates.adam(cost, params, learning_rate=learning_rate, beta1=beta1, beta2=beta2, epsilon=epsilon)
     # theano function to compare brain to their masks with ADAM optimization
     train_function = theano.function([input_var, y], updates=updates) # omitted (, allow_input_downcast=True)
 
@@ -81,12 +86,12 @@ def create_trainer(network, input_var, y):
 
 def create_validator(network, input_var, y):
     print ("Creating Validator...")
-    #We will use this for validation intermi
-    valid_prediction = lasagne.layers.get_output(network, deterministic=True)           #create prediction
-    valid_loss = lasagne.objectives.categorical_crossentropy(valid_prediction,y).mean()   #check how much error in prediction
-    valid_acc = T.mean(T.eq(T.argmax(valid_prediction, axis=1), T.argmax(y, axis=1)),dtype=theano.config.floatX)    #check the accuracy of the prediction
+    # We will use this for validation
+    valid_prediction = lasagne.layers.get_output(network, deterministic=True)           # create prediction
+    valid_loss = lasagne.objectives.categorical_crossentropy(valid_prediction,y).mean()   # check how much error there is in prediction
+    valid_acc = T.mean(T.eq(T.argmax(valid_prediction, axis=1), T.argmax(y, axis=1)),dtype=theano.config.floatX)    # check the accuracy of the prediction
 
-    validate_fn = theano.function([input_var, y], [valid_loss, valid_acc])   #check for error and accuracy percentage
+    validate_fn = theano.function([input_var, y], [valid_loss, valid_acc])   # check for error and accuracy percentage
     return validate_fn
 
 def save_model(network, save_location='', model_name='brain1'):
@@ -103,16 +108,54 @@ def load_model(network, model='brain1.npz'):
         # lasagne.layers.set_all_param_values(network, param_values)   # sets all param values
     return network
 
-def main():
+def main(argv):
+
+    # Arg parse options, all of these have defaults and are merely here for convenience when training
+    parser = argparse.ArgumentParser(prog="Thirty Min Net training script.")
+    parser.add_argument('-b', '--batch-size', dest='batch_size', default=BATCH_SIZE, type=int, help='Batch size to train with, defaults to 30')
+    parser.add_argument('-e', '--epochs', dest='epochs_to_train', default=EPOCHS, type=int, help='The number of training epochs')
+    parser.add_argument('-d', '--data-dir', dest='data_dir', default='data', help='Root directory of the data for training')
+    parser.add_argument('--reserve', dest='reserve', default='0.7,0.1,0.2',
+                        help='The proportion of data to allocate to the training, testing, validation data sets respectively. Default value is 0.7,0.1,0.2')
+    parser.add_argument('-l', '--learning-rate', dest='learning_rate', default=LEARNING_RATE, type=float, help='Learning rate to train with')
+    parser.add_argument('--adam-opts', dest='adam_opts', default='0.9,0.999,1e-8', help='Adam optimizer options as a comma delimited list in the order beta1,beta2,epsilon. Default value is 0.9,0.999,1e-8')
+    parser.add_argument('-n', '--model-name', dest='model_name', default='thirty_min', help='The name of the model')
+
+    args = parser.parse_args(argv)
+
+    adam_opts = map(lambda opt: float(opt), args.adam_opts.split(','))
+    reserve = map(lambda opt: float(opt), args.reserve.split(','))
+
+    if len(adam_opts) != 3:
+        print "Invalid value for option --adam-opts %s" % args.adam_opts
+        sys.exit(-1)
+    elif len(reserve) != 3:
+        print "Invalid value for option --reserve %s" % args.adam_opts
+        sys.exit(-1)
+
+    print "Thirty Min Net Training"
+    print "Batch Size: %d" % args.batch_size
+    print "Learning Rate: %f" % args.learning_rate
+    print "Adam Optimizer Options: "
+    print "    beta1:      %.3f" % adam_opts[0]
+    print "    beta2:      %.3f" % adam_opts[1]
+    print "    epsilon:    %.3f" % adam_opts[2]
+    print "Data Set Reserves: "
+    print "    training:   %f" % reserve[0]
+    print "    testing:    %f" % reserve[1]
+    print "    validation: %f" % reserve[2]
+    print "------------------------"
+
     input_var = T.tensor4('input')  # this will hold the image that gets inputted
     truth = T.dmatrix('truth')
 
-    epochs_to_train = 20
-    model_name = 'thirty_min'
+    epochs_to_train = args.epochs_to_train
+    model_name = args.model_name
 
-    batch_size = 30
+    batch_size = args.batch_size
     
-    training, testing, validation = create_data_sets(data_dir='./data', net_type = "Custom")
+    training, testing, validation = create_data_sets(data_dir=args.data_dir, net_type="Custom",
+                                                     training_reserve=reserve[0], testing_reserve=reserve[1], validation_reserve=reserve[2])
 
     training.set_batch_size(batch_size)
     testing.set_batch_size(batch_size)
@@ -121,7 +164,7 @@ def main():
     num_train_steps = training.get_epoch_steps()
 
     # Create conv net
-    conv_net = get_convolution_ops(dimensions=(None, 3, 210, 280), input_var=input_var)
+    conv_net = get_convolution_ops(dimensions=(batch_size, 3, 210, 280), input_var=input_var)
 
     # create classification head
     class_net = create_classification_head(conv_net)
@@ -130,7 +173,8 @@ def main():
     # bbox_net = create_bounding_box_head(conv_net)
 
     # Create trainer
-    trainer = create_trainer(network=class_net, input_var=input_var, y=truth)
+    trainer = create_trainer(network=class_net, input_var=input_var, y=truth,
+                             learning_rate=args.learning_rate, beta1=adam_opts[0], beta2=adam_opts[1], epsilon=adam_opts[2])
 
     # Create validator
     validator = create_validator(class_net,input_var,truth)
@@ -145,8 +189,7 @@ def main():
     start_time = time.time()
     time_elapsed = time.time() - start_time
 
-    # for epoch in xrange(epochs):            #use for epoch training
-    for epoch in xrange(epochs_to_train):     #use for time training
+    for epoch in xrange(epochs_to_train):
         epoch_time = time.time()
         print ("--> Epoch: %d | Epochs left: %d"%(epoch,epochs_to_train-epoch))
 
@@ -223,4 +266,4 @@ def main():
         pickle.dump(record,output)
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])
