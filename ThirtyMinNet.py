@@ -105,10 +105,18 @@ def load_model(network, model='brain1.npz'):
 def main():
     input_var = T.tensor4('input')  # this will hold the image that gets inputted
     truth = T.dmatrix('truth')
+
     epochs_to_train = 1
     model_name='thirty_min'
 
     batch_size = 50
+
+    epochs_to_train = 10
+    train_time = 0.01 #in hours
+    model_name='br1' 
+
+    batch_size = 30
+
     
     training, testing, validation = create_data_sets(data_dir='./data', net_type = "Custom")
 
@@ -139,13 +147,13 @@ def main():
     print ("Training for %s epoch(s) with %s steps per epoch"%(epochs_to_train,num_train_steps))
 
     # TODO: If the test / validation sets are too large we should load them in batches rather than the entire set
-    test_set, test_truth = testing.load_all()
+    #test_set, test_truth = testing.load_all()
 
     epoch = 0
     start_time = time.time()
     time_elapsed = time.time() - start_time
     #for epoch in xrange(epochs):            #use for epoch training
-    while epoch < epochs_to_train:     #use for time training
+    for epoch in xrange(epochs_to_train):     #use for time training
         epoch_time = time.time()
         print ("--> Epoch: %d | Epochs left: %d"%(epoch,epochs_to_train-epoch))
 
@@ -162,6 +170,10 @@ def main():
         # Get error, accuracy on the test set at the end of every epoch
         print "\nGetting test accuracy..."
 
+
+        # TODO: If the test / validation sets are too large we should load them in batches rather than the entire set
+        test_set, test_truth = testing.next_batch()
+
         error, accuracy = validator(test_set, test_truth)
         record['error'].append(error)
         record['accuracy'].append(accuracy)
@@ -170,23 +182,24 @@ def main():
         epoch_time = time.time() - epoch_time
         print ("\n  error: %s and accuracy: %s in %.2fs\n"%(error,accuracy,epoch_time))
 
-        epoch += 1
-
     print "Validating..."
 
     # Finally validate the final error and accuracy with the validation set
     # We should validate on the entire set, so use load_all
-    validation_set, validation_truth = validation.load_all()g
+
+    validation_set, validation_truth = validation.next_batch()
+
     error, accuracy = validator(validation_set, validation_truth)
     print ("\n\nFinal Results after %d epochs of training and %.2fs elapsed" % (epochs_to_train, time_elapsed))
     print ("    error: %s and accuracy: %s" % (error, accuracy))
 
-    save_model(conv_net, 'data', 'conv_weights')
-    save_model(class_net, 'data', 'classifier_net')
+    save_model(conv_net, 'data', 'conv_weights(%s)'%model_name)
+    save_model(class_net, 'data', 'classifier_net(%s)'%model_name)
 
     #save metrics to pickle file to be opened later and displayed
     import pickle
-    with open('%sstats.pickle' % model_name,'w') as output:
+    with open('%s_stats.pickle'%model_name,'w') as output:
+
         #import pudb; pu.db
         pickle.dump(record,output)
 
