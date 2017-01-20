@@ -16,7 +16,7 @@ from DataSet import create_data_sets
 # authors: Robert Fratila, Gabriel Alacchi
 
 # TRAINING HYPER PARAMS
-LEARNING_RATE = 0.001
+LEARNING_RATE = 1e-5
 BETA_1 = 0.9
 BETA_2 = 0.999
 EPSILON = 1e-08
@@ -42,7 +42,8 @@ def get_convolution_ops(dimensions, input_var):
 
 
 def create_classification_head(network):
-    # dimensions = (1,1,data.shape[0],data.shape[1]) #We have to specify the input size because of the dense layer
+
+    network = lasagne.layers.DenseLayer(network, num_units=512, nonlinearity=lasagne.nonlinearities.rectify)
 
     # Add the classification softmax head
     network = lasagne.layers.DenseLayer(network, num_units=2, nonlinearity = lasagne.nonlinearities.softmax)
@@ -106,10 +107,10 @@ def main():
     input_var = T.tensor4('input')  # this will hold the image that gets inputted
     truth = T.dmatrix('truth')
 
-    epochs_to_train = 1
-    model_name='thirty_min'
+    epochs_to_train = 20
+    model_name = 'thirty_min'
 
-    batch_size = 50
+    batch_size = 30
     
     training, testing, validation = create_data_sets(data_dir='./data', net_type = "Custom")
 
@@ -120,7 +121,7 @@ def main():
     num_train_steps = training.get_epoch_steps()
 
     # Create conv net
-    conv_net = get_convolution_ops(dimensions=(None, 3, 723, 972), input_var=input_var)
+    conv_net = get_convolution_ops(dimensions=(None, 3, 210, 280), input_var=input_var)
 
     # create classification head
     class_net = create_classification_head(conv_net)
@@ -139,12 +140,12 @@ def main():
     print ("Training for %s epoch(s) with %s steps per epoch"%(epochs_to_train,num_train_steps))
 
     # TODO: If the test / validation sets are too large we should load them in batches rather than the entire set
-    #test_set, test_truth = testing.load_all()
+    # test_set, test_truth = testing.load_all()
 
-    epoch = 0
     start_time = time.time()
     time_elapsed = time.time() - start_time
-    #for epoch in xrange(epochs):            #use for epoch training
+
+    # for epoch in xrange(epochs):            #use for epoch training
     for epoch in xrange(epochs_to_train):     #use for time training
         epoch_time = time.time()
         print ("--> Epoch: %d | Epochs left: %d"%(epoch,epochs_to_train-epoch))
@@ -160,38 +161,65 @@ def main():
             sys.stdout.write ("\r %d training steps complete: %.2f%% done epoch" % (i + 1, percentage))
 
         # Get error, accuracy on the test set at the end of every epoch
-        print "\nGetting test accuracy..."
+        print "\nGetting test accuracy on the entire testing set..."
 
-        # TODO: If the test / validation sets are too large we should load them in batches rather than the entire set
-        test_set, test_truth = testing.next_batch()
+        testing_steps = testing.get_epoch_steps()
 
-        error, accuracy = validator(test_set, test_truth)
+        error, accuracy = 0.0, 0.0
+
+        # Computes running average over the entire testing set
+        for step in xrange(testing_steps):
+            testing_set, testing_truth = testing.next_batch()
+
+            step_error, step_accuracy = validator(testing_set, testing_truth)
+
+            error += step_error
+            accuracy += step_accuracy
+
+        error /= testing_steps
+        accuracy /= testing_steps
+
         record['error'].append(error)
         record['accuracy'].append(accuracy)
         record['epoch'].append(epoch)
         time_elapsed = time.time() - start_time
         epoch_time = time.time() - epoch_time
-        print ("\n  error: %s and accuracy: %s in %.2fs\n"%(error,accuracy,epoch_time))
+        print ("\n  error: %s and accuracy: %s in %.2fs\n"%(error, accuracy, epoch_time))
+
+        training.shuffle()
 
     print "Validating..."
 
     # Finally validate the final error and accuracy with the validation set
     # We should validate on the entire set, so use load_all
 
-    validation_set, validation_truth = validation.next_batch()
+    validation_steps = validation.get_epoch_steps()
 
-    error, accuracy = validator(validation_set, validation_truth)
+    error, accuracy = 0.0, 0.0
+
+    # Computes running average over the entire validation set
+    for step in xrange(validation_steps):
+        validation_set, validation_truth = validation.next_batch()
+
+        step_error, step_accuracy = validator(validation_set, validation_truth)
+
+        error += step_error
+        accuracy += step_accuracy
+
+    error /= validation_steps
+    accuracy /= validation_steps
+
     print ("\n\nFinal Results after %d epochs of training and %.2fs elapsed" % (epochs_to_train, time_elapsed))
     print ("    error: %s and accuracy: %s" % (error, accuracy))
 
-    save_model(conv_net, 'data', 'conv_weights(%s)'%model_name)
-    save_model(class_net, 'data', 'classifier_net(%s)'%model_name)
+    save_model(conv_net, 'data', 'conv_weights_%s'%model_name)
+    save_model(class_net, 'data', 'classifier_net_%s'%model_name)
 
-    #save metrics to pickle file to be opened later and displayed
+    # save metrics to pickle file to be opened later and displayed
     import pickle
-    with open('%s_stats.pickle'%model_name,'w') as output:
+    with open('data/%s_stats.pickle' % model_name, 'w') as output:
 
-        #import pudb; pu.db
+        # import pudb; pu.db
         pickle.dump(record,output)
 
 if __name__ == "__main__":
