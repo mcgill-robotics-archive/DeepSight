@@ -134,6 +134,7 @@ def main(argv):
         sys.exit(-1)
 
     print "Thirty Min Net Training"
+    print "Model Name: %s" % args.model_name
     print "Batch Size: %d" % args.batch_size
     print "Learning Rate: %f" % args.learning_rate
     print "Adam Optimizer Options: "
