@@ -110,13 +110,6 @@ def main():
     model_name='thirty_min'
 
     batch_size = 50
-
-    epochs_to_train = 10
-    train_time = 0.01 #in hours
-    model_name='br1' 
-
-    batch_size = 30
-
     
     training, testing, validation = create_data_sets(data_dir='./data', net_type = "Custom")
 
@@ -126,9 +119,8 @@ def main():
 
     num_train_steps = training.get_epoch_steps()
 
-    # import pudb; pu.db
     # Create conv net
-    conv_net = get_convolution_ops(dimensions=(None, 3, 210, 280), input_var=input_var)
+    conv_net = get_convolution_ops(dimensions=(None, 3, 723, 972), input_var=input_var)
 
     # create classification head
     class_net = create_classification_head(conv_net)
@@ -169,7 +161,6 @@ def main():
 
         # Get error, accuracy on the test set at the end of every epoch
         print "\nGetting test accuracy..."
-
 
         # TODO: If the test / validation sets are too large we should load them in batches rather than the entire set
         test_set, test_truth = testing.next_batch()
