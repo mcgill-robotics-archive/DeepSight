@@ -163,7 +163,7 @@ def main(argv):
     training.set_batch_size(batch_size)
     testing.set_batch_size(batch_size)
     validation.set_batch_size(batch_size)
-
+    
     num_train_steps = training.get_epoch_steps()
 
     # Create conv net
@@ -173,14 +173,17 @@ def main(argv):
     class_net = create_classification_head(conv_net)
 
     # create bounding box head
-    # bbox_net = create_bounding_box_head(conv_net)
+    bbox_net = create_bounding_box_head(conv_net)
 
     # Create trainer
-    trainer = create_trainer(network=class_net, input_var=input_var, y=truth,
+    class_trainer = create_trainer(network=class_net, input_var=input_var, y=truth,
                              learning_rate=args.learning_rate, beta1=adam_opts[0], beta2=adam_opts[1], epsilon=adam_opts[2])
-
+    bbox_trainer = create_trainer(network=bbox_net, input_var=input_var, y=truth,
+                             learning_rate=args.learning_rate, beta1=adam_opts[0], beta2=adam_opts[1], epsilon=adam_opts[2])
     # Create validator
-    validator = create_validator(class_net,input_var,truth)
+    class_validator = create_validator(class_net,input_var,truth)
+
+    bbox_validator = create_validator(bbox_net,input_var,truth)
 
     record = OrderedDict(epoch=[],error=[],accuracy=[])
 
@@ -199,16 +202,18 @@ def main(argv):
         for i in xrange(num_train_steps):
             # Get next batch
 
-            train_in, truth_in = training.next_batch()
+            train_in, truth_in_class, truth_in_bbox = training.next_batch()
 
-            trainer(train_in, truth_in)
+            class_trainer(train_in, truth_in_class)
+            #bbox_trainer(train_in, truth_in_bbox)
+
             percentage = float(i+1) / float(num_train_steps) * 100
             sys.stdout.flush()
             sys.stdout.write("\r %d training steps complete: %.2f%% done epoch" % (i + 1, percentage))
 
             # On the last step
             if i == num_train_steps - 1:
-                test_err, test_acc = validator(train_in, truth_in)
+                test_err, test_acc = class_validator(train_in, truth_in_class)
                 print "\nTraining Batch Error"
                 print "error: %s and accuracy: %s" % (test_err, test_acc)
 
@@ -221,9 +226,11 @@ def main(argv):
 
         # Computes running average over the entire testing set
         for step in xrange(testing_steps):
-            testing_set, testing_truth = testing.next_batch()
+            testing_set, testing_truth_class, testing_truth_bbox = testing.next_batch()
 
-            step_error, step_accuracy = validator(testing_set, testing_truth)
+            step_error, step_accuracy = class_validator(testing_set, testing_truth_class)
+
+            #step_error, step_accuracy = bbox_validator(testing_set, testing_truth_bbox)
 
             error += step_error
             accuracy += step_accuracy
@@ -251,9 +258,10 @@ def main(argv):
 
     # Computes running average over the entire validation set
     for step in xrange(validation_steps):
-        validation_set, validation_truth = validation.next_batch()
+        validation_set, validation_truth_class, validation_truth_bbox = validation.next_batch()
+        step_error, step_accuracy = class_validator(validation_set, validation_truth_class)
 
-        step_error, step_accuracy = validator(validation_set, validation_truth)
+        #step_error, step_accuracy = bbox_validator(validation_set, validation_truth_bbox)
 
         error += step_error
         accuracy += step_accuracy

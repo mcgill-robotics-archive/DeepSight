@@ -11,10 +11,11 @@ def _load_list(image_names, image_dir, label_dir, net_type):
 
     # TODO: This is where you would perform image resizing
     batch_images = map(lambda image_name: load_image(path.join(image_dir, image_name + '.jpg'), net_type=net_type), image_names)
-    batch_labels = map(lambda image_name: contains_buoy(load_label(path.join(label_dir, image_name + '.txt'))), image_names)
-
+    batch_labels = map(lambda image_name: contains_buoy(load_label(path.join(label_dir, image_name + '.txt')))['buoy'], image_names)
+    batch_bbox = map(lambda image_name: contains_buoy(load_label(path.join(label_dir, image_name + '.txt')))['bbox'], image_names)
     # Concatenate images and labels over batch dimension
-    return np.concatenate(batch_images, axis=0), np.concatenate(batch_labels, axis=0)
+
+    return np.concatenate(batch_images, axis=0), np.concatenate(batch_labels, axis=0), np.concatenate(batch_bbox, axis=0)
 
 
 class DataSet:

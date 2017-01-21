@@ -2,6 +2,7 @@ import numpy as np
 from PIL import Image
 from ast import literal_eval
 import sys, glob, cv2
+from collections import OrderedDict
 
 def load(path_to_data):
 	#takes a string pointing to a location that contains an img folder with raw images, 
@@ -16,18 +17,28 @@ def load(path_to_data):
 		images_w_labels.append([img,label])
 	return images_w_labels
 
-def contains_buoy(label):
+def contains_buoy(label,img_size=(723,972)):
 	buoy = False
+	bbox = np.array([[0,0,0,0]]) #x,y,width,height
+	
 	for l in label:
 		if l[1] == 1:
 			buoy = True
+			break
 	if buoy:
+		x = label[0][0][0][0]/img_size[0]
+		y = label[0][0][0][1]/img_size[1]
+		width = (label[0][0][1][0] - label[0][0][0][0]) / img_size[0]
+		height = (label[0][0][1][1] - label[0][0][0][1]) / img_size[1]
 		label = [0,1]
+		bbox=np.array([[x,y,width,height]])
 	else:
 		label = [1,0]
-	return np.array(label).reshape((1, 2))
+
+	return OrderedDict(buoy = np.array(label).reshape((1, 2)),bbox = bbox)
 
 def load_label(f):
+	
 	file_obj = open(f,'rb')
 	label = []
 	for line in file_obj.readlines():
