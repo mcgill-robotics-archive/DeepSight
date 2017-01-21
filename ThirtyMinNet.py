@@ -7,7 +7,6 @@ import lasagne
 from os import path
 
 from collections import OrderedDict
-import pylab
 import sys
 
 import time
