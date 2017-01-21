@@ -36,17 +36,15 @@ class DataSet:
         # Filter out images without labels (for whatever reason)
         self.image_names = filter(lambda name: path.exists(path.join(self.label_dir, name + '.txt')), image_names)
 
-
         if self.num_images % self.batch_size != 0:
             print "Warning: The number of images %d is not divisible by the batch size %d, some images will be ignored" \
                   % (self.num_images, self.batch_size)
             self.index = 0
 
     def shuffle(self):
-        if self.index == 0:
+        if self.index != 0:
             print "Warning: Shuffling data set in the middle of an epoch"
-        else:
-            random.shuffle(self.image_names)
+        random.shuffle(self.image_names)
 
     def get_epoch_steps(self):
         return int(self.num_images / self.batch_size)
