@@ -23,7 +23,7 @@ LEARNING_RATE = 1e-5
 BETA_1 = 0.9
 BETA_2 = 0.999
 EPSILON = 1e-08
-BATCH_SIZE = 30
+BATCH_SIZE = 10
 EPOCHS = 20
 
 
@@ -36,11 +36,11 @@ def get_convolution_ops(dimensions, input_var):
 
     print ('Hidden Layer:')
     network = lasagne.layers.Conv2DLayer(network, num_filters=15, filter_size=(5, 5), pad ='same', nonlinearity=lasagne.nonlinearities.rectify)
-    network = lasagne.layers.MaxPool2DLayer(network,pool_size=(2, 2))
+    network = lasagne.layers.MaxPool2DLayer(network, pool_size=(2, 2))
     print ' ', lasagne.layers.get_output_shape(network)
 
     network = lasagne.layers.Conv2DLayer(network, num_filters=20, filter_size=(5, 5), pad='same', nonlinearity=lasagne.nonlinearities.rectify)
-    network = lasagne.layers.MaxPool2DLayer(network,pool_size=(2, 2))
+    network = lasagne.layers.MaxPool2DLayer(network, pool_size=(2, 2))
     print ' ', lasagne.layers.get_output_shape(network)
 
     return network
@@ -48,13 +48,13 @@ def get_convolution_ops(dimensions, input_var):
 
 def create_classification_head(network):
 
-    network = lasagne.layers.DenseLayer(network, num_units=512, nonlinearity=lasagne.nonlinearities.rectify)
+    network = lasagne.layers.DenseLayer(network, num_units=1024, nonlinearity=lasagne.nonlinearities.rectify)
 
     # Add the classification softmax head
-    network = lasagne.layers.DenseLayer(network, num_units=2, nonlinearity = lasagne.nonlinearities.softmax)
+    network = lasagne.layers.DenseLayer(network, num_units=2, nonlinearity=lasagne.nonlinearities.softmax)
 
     print ('Output Layer:')
-    print ' ',lasagne.layers.get_output_shape(network)
+    print ' ', lasagne.layers.get_output_shape(network)
 
     return network
 
@@ -80,19 +80,21 @@ def create_trainer(network, input_var, y, learning_rate=LEARNING_RATE, beta1=BET
     # calculate updates using ADAM optimization gradient descent
     updates = lasagne.updates.adam(cost, params, learning_rate=learning_rate, beta1=beta1, beta2=beta2, epsilon=epsilon)
     # theano function to compare brain to their masks with ADAM optimization
-    train_function = theano.function([input_var, y], updates=updates) # omitted (, allow_input_downcast=True)
+    train_function = theano.function([input_var, y], updates=updates)   # omitted (, allow_input_downcast=True)
 
     return train_function
+
 
 def create_validator(network, input_var, y):
     print ("Creating Validator...")
     # We will use this for validation
     valid_prediction = lasagne.layers.get_output(network, deterministic=True)           # create prediction
-    valid_loss = lasagne.objectives.categorical_crossentropy(valid_prediction,y).mean()   # check how much error there is in prediction
-    valid_acc = T.mean(T.eq(T.argmax(valid_prediction, axis=1), T.argmax(y, axis=1)),dtype=theano.config.floatX)    # check the accuracy of the prediction
+    valid_loss = lasagne.objectives.categorical_crossentropy(valid_prediction, y).mean()   # check how much error there is in prediction
+    valid_acc = T.mean(T.eq(T.argmax(valid_prediction, axis=1), T.argmax(y, axis=1)), dtype=theano.config.floatX)    # check the accuracy of the prediction
 
     validate_fn = theano.function([input_var, y], [valid_loss, valid_acc])   # check for error and accuracy percentage
     return validate_fn
+
 
 def save_model(network, save_location='', model_name='brain1'):
 
@@ -105,8 +107,9 @@ def load_model(network, model='brain1.npz'):
 
     with np.load(model) as f:
         param_values = [f['arr_%d' % i] for i in range(len(f.files))]  # gets all param values
-        # lasagne.layers.set_all_param_values(network, param_values)   # sets all param values
+        lasagne.layers.set_all_param_values(network, param_values)   # sets all param values
     return network
+
 
 def main(argv):
 
@@ -202,7 +205,13 @@ def main(argv):
             trainer(train_in, truth_in)
             percentage = float(i+1) / float(num_train_steps) * 100
             sys.stdout.flush()
-            sys.stdout.write ("\r %d training steps complete: %.2f%% done epoch" % (i + 1, percentage))
+            sys.stdout.write("\r %d training steps complete: %.2f%% done epoch" % (i + 1, percentage))
+
+            # On the last step
+            if i == num_train_steps - 1:
+                test_err, test_acc = validator(train_in, truth_in)
+                print "\nTraining Batch Error"
+                print "error: %s and accuracy: %s" % (test_err, test_acc)
 
         # Get error, accuracy on the test set at the end of every epoch
         print "\nGetting test accuracy on the entire testing set..."
@@ -228,7 +237,7 @@ def main(argv):
         record['epoch'].append(epoch)
         time_elapsed = time.time() - start_time
         epoch_time = time.time() - epoch_time
-        print ("\n  error: %s and accuracy: %s in %.2fs\n"%(error, accuracy, epoch_time))
+        print "\n  error: %s and accuracy: %s in %.2fs\n" % (error, accuracy, epoch_time)
 
         training.shuffle()
 
@@ -264,7 +273,7 @@ def main(argv):
     with open('data/%s_stats.pickle' % model_name, 'w') as output:
 
         # import pudb; pu.db
-        pickle.dump(record,output)
+        pickle.dump(record, output)
 
 if __name__ == "__main__":
     main(sys.argv[1:])
