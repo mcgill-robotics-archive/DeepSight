@@ -1,3 +1,4 @@
+#!/usr/bin/python
 
 import ThirtyMinNet
 import theano
@@ -7,6 +8,7 @@ import argparse
 from os import path, listdir
 from load_data import load_image
 import numpy as np
+import lasagne
 
 from DataSet import DataSet
 
@@ -72,15 +74,17 @@ def classify(args):
     input_var = T.tensor4('input')  # this will hold the image that gets inputted
     model = recreate_classifier(input_var, model_file=args.model_file, batch_size=1)
 
+    valid_prediction = lasagne.layers.get_output(model, deterministic=True)  # create prediction
+
     print "Creating theano function from model"
-    classifier = theano.function(inputs=[input_var], outputs=[model])
+    classifier = theano.function(inputs=[input_var], outputs=[valid_prediction])
 
     for i in xrange(num_images):
         image_path = path.join(image_dir, image_names[i] + '.jpg')
         image = load_image(image_path, net_type='Custom')
 
         result = classifier(image)
-        if np.argmax(result[0], axis=1) == 1:
+        if np.argmax(result[0], axis=1) == 0:
             print "%s: No buoy" % image_names[i]
         else:
             print "%s: Has a buoy" % image_names[i]
@@ -100,7 +104,7 @@ def main(argv):
     classify_parser = subparsers.add_parser('classify', help='classify help')
     classify_parser.add_argument('-d', '--data-dir', dest='data_dir', help='Root directory of that data', required=True)
     classify_parser.add_argument('-m', '--model-file', dest='model_file', help='.npz archive containing the classifier model weights', required=True)
-    classify_parser.add_argument('-n', '--image-names', dest='image_names',
+    classify_parser.add_argument('-i', '--image-names', dest='image_names',
                                  help='Comma delimited list of image names to classify. Example: a_001,b_022,a_011,c_033', required=True)
     classify_parser.set_defaults(func=classify)
 
