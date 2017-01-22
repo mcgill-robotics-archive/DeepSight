@@ -76,6 +76,7 @@ def create_trainer(network, input_var, y, learning_rate=LEARNING_RATE, beta1=BET
     params = lasagne.layers.get_all_params(network, trainable=True)
     # calculate a loss function which has to be a scalar
     cost = T.nnet.categorical_crossentropy(out, y).mean()
+    #cost = T.clip(cost,0.000001,0.999999) #thought this would get rid of the nans
     # calculate updates using ADAM optimization gradient descent
     updates = lasagne.updates.adam(cost, params, learning_rate=learning_rate, beta1=beta1, beta2=beta2, epsilon=epsilon)
     # theano function to compare brain to their masks with ADAM optimization
