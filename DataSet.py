@@ -5,7 +5,7 @@ import numpy as np
 import random
 import sys
 import argparse
-
+from ast import literal_eval
 
 def _load_list(image_names, image_dir, label_dir, net_type):
 
@@ -48,7 +48,7 @@ class DataSet:
         random.shuffle(self.image_names)
 
     def get_epoch_steps(self):
-        return int(self.num_images / self.batch_size)
+        return 1#int(self.num_images / self.batch_size)
 
     def set_batch_size(self, batch_size):
         # TODO: Make sure this isn't being done after the first batch is loaded
@@ -119,16 +119,41 @@ def create_data_sets(data_dir, training_reserve=0.7, testing_reserve=0.1, valida
 
 def resize_bulk(data_dir, img_size):
     image_dir = path.join(data_dir, 'img')
+    label_dir = path.join(data_dir, 'label')
     files = listdir(image_dir)
 
     from scipy.misc import imread, imsave, imresize
 
     for image_file in files:
         print "Resizing %s" % path.basename(image_file)
-        image_file = path.join(data_dir, 'img', image_file)
+        image_file = path.join(image_dir, image_file)
         im = imread(image_file, mode='RGB')
+        orig_size = (im.shape[0],im.shape[1])
         im = imresize(im, img_size)
         imsave(image_file, im)
+
+        label_file = path.join(label_dir,"%s.txt"%path.basename(image_file).split('.')[0])
+        print "Redoing labels on %s" % label_file
+        file_obj = open(label_file,'rb')
+        label = []
+        for line in file_obj.readlines():
+            new_label = literal_eval(line)
+
+            x = new_label[0][0][0]/float(orig_size[0])
+            y = new_label[0][0][1]/float(orig_size[1])
+            width = (new_label[0][1][0]-new_label[0][0][0])/float(orig_size[0])
+            height = (new_label[0][1][1]-new_label[0][0][1])/float(orig_size[1])
+            bbox=np.array([[[x,y,width,height],1.0]])
+
+            label += list(bbox)
+        file_obj.close()
+        file_obj = open(label_file,'w')
+        
+        for buoy in label:
+            file_obj.write("%s\n"%list(buoy))
+            print list(buoy)
+        file_obj.close()
+
 
 
 def main(argv):

@@ -121,7 +121,7 @@ def main(argv):
                         help='The proportion of data to allocate to the training, testing, validation data sets respectively. Default value is 0.7,0.1,0.2')
     parser.add_argument('-l', '--learning-rate', dest='learning_rate', default=LEARNING_RATE, type=float, help='Learning rate to train with')
     parser.add_argument('--adam-opts', dest='adam_opts', default='0.9,0.999,1e-8', help='Adam optimizer options as a comma delimited list in the order beta1,beta2,epsilon. Default value is 0.9,0.999,1e-8')
-    parser.add_argument('-n', '--model-name', dest='model_name', default='thirty_min', help='The name of the model')
+    parser.add_argument('-n', '--model-name', dest='model_name', default='blah', help='The name of the model')
 
     args = parser.parse_args(argv)
 
@@ -204,8 +204,8 @@ def main(argv):
 
             train_in, truth_in_class, truth_in_bbox = training.next_batch()
 
-            class_trainer(train_in, truth_in_class)
-            #bbox_trainer(train_in, truth_in_bbox)
+            #class_trainer(train_in, truth_in_class)
+            bbox_trainer(train_in, truth_in_bbox)
 
             percentage = float(i+1) / float(num_train_steps) * 100
             sys.stdout.flush()
@@ -213,7 +213,8 @@ def main(argv):
 
             # On the last step
             if i == num_train_steps - 1:
-                test_err, test_acc = class_validator(train_in, truth_in_class)
+                #test_err, test_acc = class_validator(train_in, truth_in_class)
+                test_err, test_acc = bbox_validator(train_in, truth_in_bbox)
                 print "\nTraining Batch Error"
                 print "error: %s and accuracy: %s" % (test_err, test_acc)
 
@@ -228,9 +229,9 @@ def main(argv):
         for step in xrange(testing_steps):
             testing_set, testing_truth_class, testing_truth_bbox = testing.next_batch()
 
-            step_error, step_accuracy = class_validator(testing_set, testing_truth_class)
+            #step_error, step_accuracy = class_validator(testing_set, testing_truth_class)
 
-            #step_error, step_accuracy = bbox_validator(testing_set, testing_truth_bbox)
+            step_error, step_accuracy = bbox_validator(testing_set, testing_truth_bbox)
 
             error += step_error
             accuracy += step_accuracy
@@ -259,9 +260,9 @@ def main(argv):
     # Computes running average over the entire validation set
     for step in xrange(validation_steps):
         validation_set, validation_truth_class, validation_truth_bbox = validation.next_batch()
-        step_error, step_accuracy = class_validator(validation_set, validation_truth_class)
+        #step_error, step_accuracy = class_validator(validation_set, validation_truth_class)
 
-        #step_error, step_accuracy = bbox_validator(validation_set, validation_truth_bbox)
+        step_error, step_accuracy = bbox_validator(validation_set, validation_truth_bbox)
 
         error += step_error
         accuracy += step_accuracy
