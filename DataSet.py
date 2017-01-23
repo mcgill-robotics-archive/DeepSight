@@ -133,27 +133,29 @@ def resize_bulk(data_dir, img_size):
         imsave(image_file, im)
 
         label_file = path.join(label_dir,"%s.txt"%path.basename(image_file).split('.')[0])
-        print "Redoing labels on %s" % label_file
-        file_obj = open(label_file,'rb')
-        label = []
-        for line in file_obj.readlines():
-            new_label = literal_eval(line)
 
-            x = new_label[0][0][0]/float(orig_size[0])
-            y = new_label[0][0][1]/float(orig_size[1])
-            width = (new_label[0][1][0]-new_label[0][0][0])/float(orig_size[0])
-            height = (new_label[0][1][1]-new_label[0][0][1])/float(orig_size[1])
-            bbox=np.array([[[x,y,width,height],1.0]])
+        if path.exists(label_file):
+            print "Redoing labels on %s" % label_file
+            file_obj = open(label_file,'rb')
+            label = []
+            for line in file_obj.readlines():
+                new_label = literal_eval(line)
 
-            label += list(bbox)
-        file_obj.close()
-        file_obj = open(label_file,'w')
-        
-        for buoy in label:
-            file_obj.write("%s\n"%list(buoy))
-            print list(buoy)
-        file_obj.close()
+                x = new_label[0][0][0]/float(orig_size[0])
+                y = new_label[0][0][1]/float(orig_size[1])
+                width = (new_label[0][1][0]-new_label[0][0][0])/float(orig_size[0])
+                height = (new_label[0][1][1]-new_label[0][0][1])/float(orig_size[1])
+                bbox=np.array([[[x,y,width,height],1.0]])
 
+                label += list(bbox)
+
+            file_obj.close()
+            file_obj = open(label_file,'w')
+
+            for buoy in label:
+                file_obj.write("%s\n"%list(buoy))
+                print list(buoy)
+            file_obj.close()
 
 
 def main(argv):
