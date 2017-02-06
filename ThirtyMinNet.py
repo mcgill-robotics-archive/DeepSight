@@ -74,8 +74,11 @@ def create_trainer(network, input_var, y, learning_rate=LEARNING_RATE, beta1=BET
     out = lasagne.layers.get_output(network)
     # get all parameters from network
     params = lasagne.layers.get_all_params(network, trainable=True)
+    
     # calculate a loss function which has to be a scalar
     cost = T.nnet.categorical_crossentropy(out, y).mean()
+    #cost = lasagne.objectives.squared_error(out, y).mean() #for regression problems
+
     #cost = T.clip(cost,0.000001,0.999999) #thought this would get rid of the nans
     # calculate updates using ADAM optimization gradient descent
     updates = lasagne.updates.adam(cost, params, learning_rate=learning_rate, beta1=beta1, beta2=beta2, epsilon=epsilon)
@@ -84,12 +87,12 @@ def create_trainer(network, input_var, y, learning_rate=LEARNING_RATE, beta1=BET
 
     return train_function
 
-
 def create_validator(network, input_var, y):
     print ("Creating Validator...")
     # We will use this for validation
     valid_prediction = lasagne.layers.get_output(network, deterministic=True)           # create prediction
     valid_loss = lasagne.objectives.categorical_crossentropy(valid_prediction, y).mean()   # check how much error there is in prediction
+    #valid_loss = lasagne.objectives.squared_error(out, y).mean() #for regression problems
     valid_acc = T.mean(T.eq(T.argmax(valid_prediction, axis=1), T.argmax(y, axis=1)), dtype=theano.config.floatX)    # check the accuracy of the prediction
 
     validate_fn = theano.function([input_var, y], [valid_loss, valid_acc])   # check for error and accuracy percentage
