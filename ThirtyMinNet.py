@@ -62,7 +62,7 @@ def create_bounding_box_head(network):
 
     network = lasagne.layers.DenseLayer(network, num_units=1024, nonlinearity = lasagne.nonlinearities.rectify)
 
-    network = lasagne.layers.DenseLayer(network, num_units=4, nonlinearity = lasagne.nonlinearities.linear)
+    network = lasagne.layers.DenseLayer(network, num_units=4, nonlinearity = lasagne.nonlinearities.sigmoid)
 
     print ('Output Layer:')
     print ' ', lasagne.layers.get_output_shape(network)
@@ -280,7 +280,7 @@ def main(argv):
     print ("    error: %s and accuracy: %s" % (error, accuracy))
 
     save_model(conv_net, 'data', 'conv_weights_%s'%model_name)
-    save_model(class_net, 'data', 'classifier_net_%s'%model_name)
+    save_model(bbox_net, 'data', 'classifier_net_%s'%model_name)
 
     # save metrics to pickle file to be opened later and displayed
     import pickle
