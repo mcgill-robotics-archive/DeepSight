@@ -18,7 +18,7 @@ import argparse
 # authors: Robert Fratila, Gabriel Alacchi
 
 # TRAINING HYPER PARAMS DEFAULTS
-LEARNING_RATE = 1e-5
+LEARNING_RATE = 1e-3
 BETA_1 = 0.9
 BETA_2 = 0.999
 EPSILON = 1e-08
@@ -60,6 +60,8 @@ def create_classification_head(network):
 
 def create_bounding_box_head(network):
 
+    network = lasagne.layers.DenseLayer(network, num_units=1024, nonlinearity = lasagne.nonlinearities.rectify)
+
     network = lasagne.layers.DenseLayer(network, num_units=4, nonlinearity = lasagne.nonlinearities.linear)
 
     print ('Output Layer:')
@@ -76,8 +78,8 @@ def create_trainer(network, input_var, y, learning_rate=LEARNING_RATE, beta1=BET
     params = lasagne.layers.get_all_params(network, trainable=True)
     
     # calculate a loss function which has to be a scalar
-    cost = T.nnet.categorical_crossentropy(out, y).mean()
-    #cost = lasagne.objectives.squared_error(out, y).mean() #for regression problems
+    # cost = T.nnet.categorical_crossentropy(out, y).mean()
+    cost = lasagne.objectives.squared_error(out, y).mean() #for regression problems
 
     #cost = T.clip(cost,0.000001,0.999999) #thought this would get rid of the nans
     # calculate updates using ADAM optimization gradient descent
@@ -91,8 +93,8 @@ def create_validator(network, input_var, y):
     print ("Creating Validator...")
     # We will use this for validation
     valid_prediction = lasagne.layers.get_output(network, deterministic=True)           # create prediction
-    valid_loss = T.nnet.categorical_crossentropy(valid_prediction, y).mean()   # check how much error there is in prediction
-    #valid_loss = lasagne.objectives.squared_error(out, y).mean() #for regression problems
+    # valid_loss = T.nnet.categorical_crossentropy(valid_prediction, y).mean()   # check how much error there is in prediction
+    valid_loss = lasagne.objectives.squared_error(valid_prediction, y).mean() #for regression problems
     valid_acc = T.mean(T.eq(T.argmax(valid_prediction, axis=1), T.argmax(y, axis=1)), dtype=theano.config.floatX)    # check the accuracy of the prediction
 
     validate_fn = theano.function([input_var, y], [valid_loss, valid_acc])   # check for error and accuracy percentage
@@ -168,7 +170,7 @@ def main(argv):
     testing.set_batch_size(batch_size)
     validation.set_batch_size(batch_size)
     
-    num_train_steps = 1 # training.get_epoch_steps()
+    num_train_steps = training.get_epoch_steps()
 
     # Create conv net
     conv_net = get_convolution_ops(dimensions=(batch_size, 3, 210, 280), input_var=input_var)
