@@ -91,7 +91,7 @@ def create_validator(network, input_var, y):
     print ("Creating Validator...")
     # We will use this for validation
     valid_prediction = lasagne.layers.get_output(network, deterministic=True)           # create prediction
-    valid_loss = lasagne.objectives.categorical_crossentropy(valid_prediction, y).mean()   # check how much error there is in prediction
+    valid_loss = T.nnet.categorical_crossentropy(valid_prediction, y).mean()   # check how much error there is in prediction
     #valid_loss = lasagne.objectives.squared_error(out, y).mean() #for regression problems
     valid_acc = T.mean(T.eq(T.argmax(valid_prediction, axis=1), T.argmax(y, axis=1)), dtype=theano.config.floatX)    # check the accuracy of the prediction
 
@@ -162,13 +162,13 @@ def main(argv):
     batch_size = args.batch_size
     
     training, testing, validation = create_data_sets(data_dir=args.data_dir, net_type="Custom",
-                                                     training_reserve=reserve[0], testing_reserve=reserve[1], validation_reserve=reserve[2])
+                                                     training_reserve=reserve[0], testing_reserve=reserve[1], validation_reserve=reserve[2], filter_no_buoys=True)
 
     training.set_batch_size(batch_size)
     testing.set_batch_size(batch_size)
     validation.set_batch_size(batch_size)
     
-    num_train_steps = training.get_epoch_steps()
+    num_train_steps = 1 # training.get_epoch_steps()
 
     # Create conv net
     conv_net = get_convolution_ops(dimensions=(batch_size, 3, 210, 280), input_var=input_var)
@@ -180,12 +180,12 @@ def main(argv):
     bbox_net = create_bounding_box_head(conv_net)
 
     # Create trainer
-    class_trainer = create_trainer(network=class_net, input_var=input_var, y=truth,
-                             learning_rate=args.learning_rate, beta1=adam_opts[0], beta2=adam_opts[1], epsilon=adam_opts[2])
+    # class_trainer = create_trainer(network=class_net, input_var=input_var, y=truth,
+    #                                learning_rate=args.learning_rate, beta1=adam_opts[0], beta2=adam_opts[1], epsilon=adam_opts[2])
     bbox_trainer = create_trainer(network=bbox_net, input_var=input_var, y=truth,
-                             learning_rate=args.learning_rate, beta1=adam_opts[0], beta2=adam_opts[1], epsilon=adam_opts[2])
+                                  learning_rate=args.learning_rate, beta1=adam_opts[0], beta2=adam_opts[1], epsilon=adam_opts[2])
     # Create validator
-    class_validator = create_validator(class_net,input_var,truth)
+    # class_validator = create_validator(class_net,input_var,truth)
 
     bbox_validator = create_validator(bbox_net,input_var,truth)
 

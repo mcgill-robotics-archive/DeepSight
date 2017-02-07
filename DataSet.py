@@ -20,12 +20,12 @@ def _load_list(image_names, image_dir, label_dir, net_type):
 
 class DataSet:
 
-    def __init__(self, image_names, data_dir, net_type, batch_size = 1, image_size=None):
+    def __init__(self, image_names, data_dir, net_type, batch_size = 1, image_size=None, filter_no_buoy=False):
         # TODO: Implement image_size option so that if provided the images are resized after loaded.
 
         self.image_names = image_names
+
         self.data_dir = data_dir
-        self.num_images = len(image_names)
         self.index = 0
         self.batch_size = batch_size
         self.image_size = image_size
@@ -35,12 +35,27 @@ class DataSet:
         self.net_type = net_type
 
         # Filter out images without labels (for whatever reason)
-        self.image_names = filter(lambda name: path.exists(path.join(self.label_dir, name + '.txt')), image_names)
+        self.image_names = filter(lambda name: path.exists(path.join(self.label_dir, name + '.txt')), self.image_names)
+
+        if filter_no_buoy:
+            self.filter_no_buoys()
+
+        self.num_images = len(image_names)
 
         if self.num_images % self.batch_size != 0:
             print "Warning: The number of images %d is not divisible by the batch size %d, some images will be ignored" \
                   % (self.num_images, self.batch_size)
             self.index = 0
+
+    def filter_no_buoys(self):
+        # Lambda to load label from image name
+        label = lambda name: load_label(path.join(self.label_dir, name + '.txt'))
+        compare = lambda label: np.argmax(label['buoy'][0], axis=0) == 1
+
+        # Filter's out entries without buoys
+        print "Filtering out images with no buoy..."
+        self.image_names = filter(lambda name: compare(contains_buoy(label(name))), self.image_names)
+
 
     def shuffle(self):
         if self.index != 0:
@@ -48,7 +63,7 @@ class DataSet:
         random.shuffle(self.image_names)
 
     def get_epoch_steps(self):
-        return 1#int(self.num_images / self.batch_size)
+        return int(self.num_images / self.batch_size)
 
     def set_batch_size(self, batch_size):
         # TODO: Make sure this isn't being done after the first batch is loaded
@@ -80,7 +95,7 @@ class DataSet:
 
 
 # Returns training sets, validation sets, testing sets in that order as a tuple
-def create_data_sets(data_dir, training_reserve=0.7, testing_reserve=0.1, validation_reserve=0.2, net_type = "VGG"):
+def create_data_sets(data_dir, training_reserve=0.7, testing_reserve=0.1, validation_reserve=0.2, net_type = "VGG", filter_no_buoys=False):
 
     # Make sure the proportions add to 1.0, if not warn the user and switch back to defaults
     if training_reserve + testing_reserve + validation_reserve != 1.0:
@@ -112,9 +127,9 @@ def create_data_sets(data_dir, training_reserve=0.7, testing_reserve=0.1, valida
     i += num_testing
     validation_names = image_names[i:i+num_validation]
 
-    return (DataSet(training_names, data_dir, net_type),
-            DataSet(testing_names, data_dir, net_type),
-            DataSet(validation_names, data_dir, net_type))
+    return (DataSet(training_names, data_dir, net_type, filter_no_buoy=filter_no_buoys),
+            DataSet(testing_names, data_dir, net_type, filter_no_buoy=filter_no_buoys),
+            DataSet(validation_names, data_dir, net_type, filter_no_buoy=filter_no_buoys))
 
 
 def resize_bulk(data_dir, img_size):
