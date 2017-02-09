@@ -9,6 +9,7 @@ if __name__ == "__main__":
     flags.DEFINE_string('outdir', 'data/csv_labels', 'The directory to output the csv labels')
     FLAGS = flags.FLAGS
 
+### THE FOLLOWING 2 FUNCTIONS ARE FOR TRANSFORMING THE LABELS INTO A CSV FORMAT ###
 def create_line(label):
 
     # [ [[x, y, w, h], 1.0] ]
@@ -39,6 +40,7 @@ def create_labels(label_dir, output_dir):
             file_stream.write(line)
 
 
+### TENSORFLOW INPUT FUNCTIONS ###
 def decode_jpeg(queue, image_size):
     reader = tf.WholeFileReader(name='reader')
     _, record = reader.read(queue, name='read')

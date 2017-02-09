@@ -11,18 +11,18 @@ if __name__ == "__main__":
     flags = tf.app.flags
     flags.DEFINE_string('data_dir', 'data', 'The directory containing the data')
     flags.DEFINE_integer('batch_size', 10, 'Batch size to train with')
-    flags.DEFINE_integer('max_steps', 10, 'Number of steps to train for')
+    flags.DEFINE_integer('max_steps', 3000, 'Number of steps to train for')
     flags.DEFINE_float('learning_rate', 1e-3, 'The learning rate')
     flags.DEFINE_float('adam_beta1', 0.9, 'Adam hyper parameter beta1')
     flags.DEFINE_float('adam_beta2', 0.999, 'Adam hyper parameter beta2')
     flags.DEFINE_float('adam_epsilon', 1e-8, 'Adam hyper parameter epsilon')
 
     flags.DEFINE_float('class_weight', 1.0, 'Weight for classifier loss')
-    flags.DEFINE_float('bbox_weight', 1.0, 'Weight for bbox loss')
+    flags.DEFINE_float('bbox_weight', 1e2, 'Weight for bbox loss')
 
     flags.DEFINE_integer('report_step', 50, 'The training step to report on')
     flags.DEFINE_integer('save_step', 500, 'The training step to save on')
-    flags.DEFINE_integer('max_test_steps', 10, 'The maximum number of test steps')
+    flags.DEFINE_integer('max_test_steps', 500, 'The maximum number of test steps')
 
     flags.DEFINE_string('logdir', 'data/logdir', 'Where the save model and summaries')
     flags.DEFINE_string('model_name', 'thirty_min', 'The name of the model')
