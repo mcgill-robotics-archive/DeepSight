@@ -55,10 +55,10 @@ def decode_label(queue):
     _, record = reader.read(queue, name='read')
     record_defaults = [[0.0], [1.0]] + [[-1.0]] * 12
     csv_body = tf.decode_csv(record, record_defaults=record_defaults, name='raw_label')
-    class_label = tf.pack(csv_body[0:2], name='class_label')
-    bbox1 = tf.pack(csv_body[2:6], name='bbox_1')
-    bbox2 = tf.pack(csv_body[6:10], name='bbox_2')
-    bbox3 = tf.pack(csv_body[10:14], name='bbox_3')
+    class_label = tf.stack(csv_body[0:2], name='class_label')
+    bbox1 = tf.stack(csv_body[2:6], name='bbox_1')
+    bbox2 = tf.stack(csv_body[6:10], name='bbox_2')
+    bbox3 = tf.stack(csv_body[10:14], name='bbox_3')
 
     return class_label, bbox1, bbox2, bbox3
 

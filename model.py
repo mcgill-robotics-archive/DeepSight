@@ -10,7 +10,7 @@ THIRTYMIN_COLLECTION = 'thirty_min_collection'
 if __name__ == "__main__":
     flags = tf.app.flags
     flags.DEFINE_string('data_dir', 'data', 'The directory containing the data')
-    flags.DEFINE_integer('batch_size', 10, 'Batch size to train with')
+    flags.DEFINE_integer('batch_size', 5, 'Batch size to train with')
     flags.DEFINE_integer('max_steps', 3000, 'Number of steps to train for')
     flags.DEFINE_float('learning_rate', 1e-3, 'The learning rate')
     flags.DEFINE_float('adam_beta1', 0.9, 'Adam hyper parameter beta1')
@@ -33,13 +33,13 @@ if __name__ == "__main__":
 def create_model(images, trainable=False, reuse=False):
 
     with tf.variable_scope('conv_1', reuse=reuse):
-        model = ops.conv_layer(images, filter_size=(5, 5), num_features=32, strides=(1, 1),
+        model = ops.conv_layer(images, filter_size=(3, 3), num_features=32, strides=(1, 1),
                                trainable=trainable, collection=THIRTYMIN_COLLECTION)
         model = ops.instance_norm(model)
         model = ops.max_pool(model, pool_size=(3, 3), strides=(2, 2))
 
     with tf.variable_scope('conv_2', reuse=reuse):
-        model = ops.conv_layer(model, filter_size=(5, 5), num_features=64, strides=(1, 1),
+        model = ops.conv_layer(model, filter_size=(3, 3), num_features=64, strides=(1, 1),
                                trainable=trainable, collection=THIRTYMIN_COLLECTION)
         model = ops.instance_norm(model)
         model = ops.max_pool(model, pool_size=(7, 7), strides=(4, 4))
@@ -51,7 +51,7 @@ def create_model(images, trainable=False, reuse=False):
 
     # Classifier
     with tf.variable_scope('class_fc_1', reuse=reuse):
-        classifier = tf.contrib.layers.fully_connected(model, 1024, activation_fn=tf.nn.relu)
+        classifier = tf.contrib.layers.fully_connected(model, 512, activation_fn=tf.nn.relu)
 
     with tf.variable_scope('class_softmax', reuse=reuse):
         classifier_logits = tf.contrib.layers.fully_connected(classifier, 2, activation_fn=None)
@@ -60,7 +60,7 @@ def create_model(images, trainable=False, reuse=False):
 
     # BBox head
     with tf.variable_scope('bbox_fc_1', reuse=reuse):
-        bbox = tf.contrib.layers.fully_connected(model, 1024, activation_fn=tf.nn.relu)
+        bbox = tf.contrib.layers.fully_connected(model, 512, activation_fn=tf.nn.relu)
 
     with tf.variable_scope('bbox_output', reuse=reuse):
         bbox = tf.contrib.layers.fully_connected(bbox, 4, activation_fn=tf.nn.sigmoid)
@@ -88,17 +88,18 @@ def model_validate(class_scores, bbox_head, class_labels, bbox_labels):
 
     return class_accuracy, bbox_accuracy
 
+
 def model_loss(class_logits, bbox_head, class_labels, bbox_labels, summaries=True, summary_scope='loss_summaries'):
 
     with tf.name_scope('class_loss'):
-        cross_entropy = tf.nn.softmax_cross_entropy_with_logits(class_logits, class_labels)
-        class_loss = tf.mul(tf.reduce_mean(cross_entropy), FLAGS.class_weight, name='class_loss')
+        cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=class_logits, labels=class_labels)
+        class_loss = tf.multiply(tf.reduce_mean(cross_entropy), FLAGS.class_weight, name='class_loss')
 
     with tf.name_scope('bbox_loss'):
         mse = tf.sqrt(tf.reduce_mean((bbox_head - bbox_labels) ** 2), name='mse')
-        bbox_loss = tf.mul(mse, FLAGS.bbox_weight, name='bbox_loss')
+        bbox_loss = tf.multiply(mse, FLAGS.bbox_weight, name='bbox_loss')
 
-    total_loss = tf.add(class_loss, bbox_loss, name='total_loss')
+    total_loss = tf.add(0.0, bbox_loss, name='total_loss')
 
     if summaries:
         with tf.name_scope(summary_scope):
